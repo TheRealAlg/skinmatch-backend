@@ -6,4 +6,3 @@ coverage/
 !.env.example
 npm-debug.log*
 .DS_Store
-prisma/migrations/

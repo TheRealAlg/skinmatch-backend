@@ -51,7 +51,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       return {
         code: typeof typed.error === "string" ? typed.error : undefined,
         message: typed.message as string | string[] | undefined,
-        details: typed.message
+        details: typed.details ?? typed.message
       };
     }
     return {};

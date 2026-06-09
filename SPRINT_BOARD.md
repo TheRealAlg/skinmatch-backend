@@ -13,10 +13,17 @@ auth/session
 
 ## In Progress
 
-- Backend scaffold validation.
+- None.
 
 ## Ready
 
+- Product Catalog Schema + Read APIs.
+
+## Done
+
+- Initial scaffold created.
+- Codex runbook created.
+- GitHub Actions CI workflow prepared.
 - BE-001 Backend foundation.
 - BE-002 Local infrastructure.
 - BE-003 Prisma core schema.
@@ -24,18 +31,11 @@ auth/session
 - BE-005 Auth/session skeleton.
 - BE-006 Consent APIs.
 - BE-007 Skin profile APIs.
-- QA-001 Sprint 1 QA matrix.
-
-## Done
-
-- Initial scaffold created.
-- Codex runbook created.
-- GitHub Actions CI workflow prepared.
+- QA-001 Sprint 1 e2e flow.
 
 ## Blocked
 
-- None in repo once pushed to GitHub.
-- ChatGPT workspace could not run npm install due registry 403 and does not have Docker.
+- None.
 
 ## Definition Of Done
 

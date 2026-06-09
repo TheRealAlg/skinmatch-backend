@@ -66,10 +66,19 @@ jobs:
         run: npm run prisma:generate
 
       - name: Validate Prisma schema
-        run: npx prisma validate
+        run: npm run prisma:validate
+
+      - name: Apply Prisma migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed database
+        run: npm run prisma:seed
 
       - name: Build
         run: npm run build
+
+      - name: Lint
+        run: npm run lint
 
       - name: Test
         run: npm test
