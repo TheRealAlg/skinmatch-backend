@@ -1,0 +1,60 @@
+### Health
+GET http://localhost:3000/api/v1/health
+
+### Create mock session
+POST http://localhost:3000/api/v1/auth/session
+content-type: application/json
+
+{
+  "idToken": "local-user-1"
+}
+
+### Get consents
+GET http://localhost:3000/api/v1/me/consents
+authorization: Bearer {{accessToken}}
+
+### Accept skin profile consent
+POST http://localhost:3000/api/v1/me/consents
+authorization: Bearer {{accessToken}}
+content-type: application/json
+
+{
+  "consentType": "skin_profile_processing",
+  "consentVersion": "2026-06-08-v1",
+  "status": "accepted",
+  "locale": "tr-TR",
+  "marketCode": "TR"
+}
+
+### Save skin profile
+PUT http://localhost:3000/api/v1/me/skin-profile
+authorization: Bearer {{accessToken}}
+content-type: application/json
+
+{
+  "skinType": "combination",
+  "sensitivityLevel": "medium",
+  "oilinessPattern": "t_zone",
+  "drynessPattern": "cheeks",
+  "poresLevel": "high",
+  "blackheadTendency": "often",
+  "cloggedPoreTendency": "sometimes",
+  "acneTendency": "occasional",
+  "rednessTendency": "low",
+  "hyperpigmentationLevel": "medium",
+  "textureConcernLevel": "high",
+  "dehydrationLevel": "medium",
+  "barrierDamageLevel": "low",
+  "goals": [
+    { "goalKey": "reduce_blackheads", "priority": 1 },
+    { "goalKey": "reduce_oiliness", "priority": 2 },
+    { "goalKey": "improve_texture", "priority": 3 }
+  ],
+  "knownTriggers": [
+    { "triggerKey": "fragrance", "severity": "medium" }
+  ]
+}
+
+### Get skin profile
+GET http://localhost:3000/api/v1/me/skin-profile
+authorization: Bearer {{accessToken}}

@@ -1,0 +1,35 @@
+{
+  "skinType": "combination",
+  "sensitivityLevel": "medium",
+  "oilinessPattern": "t_zone",
+  "drynessPattern": "cheeks",
+  "poresLevel": "high",
+  "blackheadTendency": "often",
+  "cloggedPoreTendency": "sometimes",
+  "acneTendency": "occasional",
+  "rednessTendency": "low",
+  "hyperpigmentationLevel": "medium",
+  "textureConcernLevel": "high",
+  "dehydrationLevel": "medium",
+  "barrierDamageLevel": "low",
+  "goals": [
+    {
+      "goalKey": "reduce_blackheads",
+      "priority": 1
+    },
+    {
+      "goalKey": "reduce_oiliness",
+      "priority": 2
+    },
+    {
+      "goalKey": "improve_texture",
+      "priority": 3
+    }
+  ],
+  "knownTriggers": [
+    {
+      "triggerKey": "fragrance",
+      "severity": "medium"
+    }
+  ]
+}

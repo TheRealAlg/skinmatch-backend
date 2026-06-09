@@ -1,0 +1,312 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ConsentStatus {
+  accepted
+  revoked
+}
+
+enum ConsentType {
+  account_terms
+  skin_profile_processing
+  product_history_processing
+  review_publication
+  analytics_optional
+}
+
+enum SkinType {
+  oily
+  dry
+  combination
+  normal
+  not_sure
+}
+
+enum LevelWithUnknown {
+  low
+  medium
+  high
+  not_sure
+}
+
+enum PatternWithUnknown {
+  none_low
+  t_zone
+  cheeks
+  all_over
+  not_sure
+}
+
+enum TendencyWithUnknown {
+  rarely
+  sometimes
+  often
+  not_sure
+}
+
+enum AcneTendency {
+  rarely
+  occasional
+  frequent
+  not_sure
+}
+
+enum SkinGoalKey {
+  reduce_blackheads
+  reduce_breakouts
+  improve_texture
+  improve_hydration
+  repair_barrier
+  reduce_redness
+  reduce_oiliness
+  improve_dark_spots
+  reduce_dullness
+  maintain_skin_health
+}
+
+enum TriggerKey {
+  fragrance
+  alcohol_denat
+  acids
+  retinoids
+  essential_oils
+  heavy_creams
+  not_sure
+}
+
+enum VerificationStatus {
+  unverified
+  user_submitted
+  retailer_sourced
+  label_reviewed
+  uts_checked
+}
+
+enum DataConfidence {
+  low
+  medium
+  high
+}
+
+model Market {
+  id                String   @id @default(uuid()) @db.Uuid
+  marketCode        String   @unique @map("market_code")
+  defaultLocale     String   @map("default_locale")
+  currencyCode      String   @map("currency_code")
+  regulatoryContext String?  @map("regulatory_context")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  users          User[]
+  consents       UserConsent[]
+  productMarkets ProductMarket[]
+
+  @@map("markets")
+}
+
+model User {
+  id              String   @id @default(uuid()) @db.Uuid
+  email           String?
+  displayName     String?  @map("display_name")
+  authProvider    String   @map("auth_provider")
+  providerSubject String   @map("provider_subject")
+  defaultMarketId String   @map("default_market_id") @db.Uuid
+  locale          String   @default("tr-TR")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  defaultMarket Market            @relation(fields: [defaultMarketId], references: [id])
+  consents      UserConsent[]
+  skinProfile   UserSkinProfile?
+
+  @@unique([authProvider, providerSubject])
+  @@index([email])
+  @@map("users")
+}
+
+model UserConsent {
+  id             String        @id @default(uuid()) @db.Uuid
+  userId         String        @map("user_id") @db.Uuid
+  marketId       String        @map("market_id") @db.Uuid
+  consentType    ConsentType   @map("consent_type")
+  consentVersion String        @map("consent_version")
+  status         ConsentStatus
+  locale         String
+  acceptedAt     DateTime?     @map("accepted_at")
+  revokedAt      DateTime?     @map("revoked_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id])
+  market Market @relation(fields: [marketId], references: [id])
+
+  @@index([userId, consentType, createdAt])
+  @@index([marketId])
+  @@map("user_consents")
+}
+
+model UserSkinProfile {
+  id                      String              @id @default(uuid()) @db.Uuid
+  userId                  String              @unique @map("user_id") @db.Uuid
+  skinType                SkinType            @map("skin_type")
+  sensitivityLevel        LevelWithUnknown    @map("sensitivity_level")
+  oilinessPattern         PatternWithUnknown  @map("oiliness_pattern")
+  drynessPattern          PatternWithUnknown  @map("dryness_pattern")
+  poresLevel              LevelWithUnknown    @map("pores_level")
+  blackheadTendency       TendencyWithUnknown @map("blackhead_tendency")
+  cloggedPoreTendency     TendencyWithUnknown @map("clogged_pore_tendency")
+  acneTendency            AcneTendency        @map("acne_tendency")
+  rednessTendency         LevelWithUnknown    @map("redness_tendency")
+  hyperpigmentationLevel  LevelWithUnknown    @map("hyperpigmentation_level")
+  textureConcernLevel     LevelWithUnknown    @map("texture_concern_level")
+  dehydrationLevel        LevelWithUnknown    @map("dehydration_level")
+  barrierDamageLevel      LevelWithUnknown    @map("barrier_damage_level")
+  createdAt               DateTime            @default(now()) @map("created_at")
+  updatedAt               DateTime            @updatedAt @map("updated_at")
+
+  user     User               @relation(fields: [userId], references: [id])
+  goals    UserSkinGoal[]
+  triggers UserKnownTrigger[]
+
+  @@map("user_skin_profiles")
+}
+
+model UserSkinGoal {
+  id        String      @id @default(uuid()) @db.Uuid
+  profileId String      @map("profile_id") @db.Uuid
+  goalKey   SkinGoalKey @map("goal_key")
+  priority  Int         @default(0)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  profile UserSkinProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, goalKey])
+  @@map("user_skin_goals")
+}
+
+model UserKnownTrigger {
+  id        String           @id @default(uuid()) @db.Uuid
+  profileId String           @map("profile_id") @db.Uuid
+  triggerKey TriggerKey      @map("trigger_key")
+  severity  LevelWithUnknown @default(not_sure)
+  source    String           @default("user_reported")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  profile UserSkinProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, triggerKey])
+  @@map("user_known_triggers")
+}
+
+model Brand {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  normalizedName String   @map("normalized_name")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  globalProducts ProductGlobal[]
+  marketProducts ProductMarket[]
+
+  @@index([normalizedName])
+  @@map("brands")
+}
+
+model ProductGlobal {
+  id             String   @id @default(uuid()) @db.Uuid
+  brandId        String   @map("brand_id") @db.Uuid
+  canonicalName  String   @map("canonical_name")
+  normalizedName String   @map("normalized_name")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  brand          Brand           @relation(fields: [brandId], references: [id])
+  marketProducts ProductMarket[]
+
+  @@index([brandId])
+  @@index([normalizedName])
+  @@map("product_global")
+}
+
+model ProductMarket {
+  id                         String             @id @default(uuid()) @db.Uuid
+  productGlobalId            String             @map("product_global_id") @db.Uuid
+  marketId                   String             @map("market_id") @db.Uuid
+  brandId                    String             @map("brand_id") @db.Uuid
+  localProductName           String             @map("local_product_name")
+  normalizedLocalProductName String             @map("normalized_local_product_name")
+  category                   String
+  barcodeGtin                String?            @map("barcode_gtin")
+  rawIngredientText          String?            @map("raw_ingredient_text")
+  verificationStatus         VerificationStatus @default(unverified) @map("verification_status")
+  verificationMethod         String?            @map("verification_method")
+  verificationSource         String?            @map("verification_source")
+  verificationCheckedAt      DateTime?          @map("verification_checked_at")
+  dataConfidence             DataConfidence     @default(low) @map("data_confidence")
+  createdAt                  DateTime           @default(now()) @map("created_at")
+  updatedAt                  DateTime           @updatedAt @map("updated_at")
+
+  productGlobal ProductGlobal @relation(fields: [productGlobalId], references: [id])
+  market        Market        @relation(fields: [marketId], references: [id])
+  brand         Brand         @relation(fields: [brandId], references: [id])
+  ingredients   ProductMarketIngredient[]
+
+  @@index([marketId])
+  @@index([brandId])
+  @@index([barcodeGtin])
+  @@index([category])
+  @@index([verificationStatus])
+  @@index([dataConfidence])
+  @@index([normalizedLocalProductName])
+  @@map("product_market")
+}
+
+model Ingredient {
+  id             String   @id @default(uuid()) @db.Uuid
+  inciName       String   @map("inci_name")
+  normalizedName String   @unique @map("normalized_name")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  productMappings ProductMarketIngredient[]
+
+  @@map("ingredients")
+}
+
+model ProductMarketIngredient {
+  id              String   @id @default(uuid()) @db.Uuid
+  productMarketId String   @map("product_market_id") @db.Uuid
+  ingredientId    String   @map("ingredient_id") @db.Uuid
+  position        Int?
+  rawText         String?  @map("raw_text")
+  mappingConfidence DataConfidence @default(low) @map("mapping_confidence")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  productMarket ProductMarket @relation(fields: [productMarketId], references: [id], onDelete: Cascade)
+  ingredient    Ingredient    @relation(fields: [ingredientId], references: [id])
+
+  @@unique([productMarketId, ingredientId])
+  @@index([ingredientId])
+  @@map("product_market_ingredients")
+}
+
+model AdminAuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String
+  targetType     String   @map("target_type")
+  targetId       String?  @map("target_id")
+  beforeSnapshot Json?    @map("before_snapshot")
+  afterSnapshot  Json?    @map("after_snapshot")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([actorUserId])
+  @@index([targetType, targetId])
+  @@map("admin_audit_logs")
+}
