@@ -17,7 +17,7 @@ auth/session
 
 ## Ready
 
-- Product Catalog Schema + Read APIs.
+- Product Catalog Android Contract QA + Search Relevance Pass.
 
 ## Done
 
@@ -32,6 +32,8 @@ auth/session
 - BE-006 Consent APIs.
 - BE-007 Skin profile APIs.
 - QA-001 Sprint 1 e2e flow.
+- CAT-001 Product Catalog Schema + Read APIs.
+- QA-002 Product catalog read e2e flow.
 
 ## Blocked
 
@@ -46,3 +48,4 @@ auth/session
 - Local migration and seed succeed.
 - `/api/v1/health` returns standard envelope.
 - Consent-gated skin profile write behavior is tested.
+- Product catalog search/detail/barcode read behavior is tested.

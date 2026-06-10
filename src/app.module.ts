@@ -7,6 +7,7 @@ import { RequestIdMiddleware } from "./common/middleware/request-id.middleware";
 import { AuthModule } from "./modules/auth/auth.module";
 import { ConsentsModule } from "./modules/consents/consents.module";
 import { SkinProfileModule } from "./modules/skin-profile/skin-profile.module";
+import { ProductsModule } from "./modules/products/products.module";
 import { envValidationSchema } from "./common/config/env.validation";
 
 @Module({
@@ -20,7 +21,8 @@ import { envValidationSchema } from "./common/config/env.validation";
     HealthModule,
     AuthModule,
     ConsentsModule,
-    SkinProfileModule
+    SkinProfileModule,
+    ProductsModule
   ]
 })
 export class AppModule implements NestModule {

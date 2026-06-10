@@ -106,6 +106,7 @@ model Market {
   users          User[]
   consents       UserConsent[]
   productMarkets ProductMarket[]
+  regulatoryChecks ProductRegulatoryCheck[]
 
   @@map("markets")
 }
@@ -214,6 +215,7 @@ model Brand {
   globalProducts ProductGlobal[]
   marketProducts ProductMarket[]
 
+  @@unique([normalizedName])
   @@index([normalizedName])
   @@map("brands")
 }
@@ -229,6 +231,7 @@ model ProductGlobal {
   brand          Brand           @relation(fields: [brandId], references: [id])
   marketProducts ProductMarket[]
 
+  @@unique([brandId, normalizedName])
   @@index([brandId])
   @@index([normalizedName])
   @@map("product_global")
@@ -242,12 +245,12 @@ model ProductMarket {
   localProductName           String             @map("local_product_name")
   normalizedLocalProductName String             @map("normalized_local_product_name")
   category                   String
-  barcodeGtin                String?            @map("barcode_gtin")
-  rawIngredientText          String?            @map("raw_ingredient_text")
+  barcodeGtin                String             @map("barcode_gtin")
+  rawIngredientText          String             @map("raw_ingredient_text")
   verificationStatus         VerificationStatus @default(unverified) @map("verification_status")
-  verificationMethod         String?            @map("verification_method")
-  verificationSource         String?            @map("verification_source")
-  verificationCheckedAt      DateTime?          @map("verification_checked_at")
+  verificationMethod         String             @map("verification_method")
+  verificationSource         String             @map("verification_source")
+  verificationCheckedAt      DateTime           @map("verification_checked_at")
   dataConfidence             DataConfidence     @default(low) @map("data_confidence")
   createdAt                  DateTime           @default(now()) @map("created_at")
   updatedAt                  DateTime           @updatedAt @map("updated_at")
@@ -256,7 +259,10 @@ model ProductMarket {
   market        Market        @relation(fields: [marketId], references: [id])
   brand         Brand         @relation(fields: [brandId], references: [id])
   ingredients   ProductMarketIngredient[]
+  images        ProductMarketImage[]
+  regulatoryChecks ProductRegulatoryCheck[]
 
+  @@unique([marketId, barcodeGtin])
   @@index([marketId])
   @@index([brandId])
   @@index([barcodeGtin])
@@ -267,6 +273,43 @@ model ProductMarket {
   @@map("product_market")
 }
 
+model ProductMarketImage {
+  id              String   @id @default(uuid()) @db.Uuid
+  productMarketId String   @map("product_market_id") @db.Uuid
+  url             String
+  altText         String?  @map("alt_text")
+  source          String?
+  sortOrder       Int      @default(0) @map("sort_order")
+  isPrimary       Boolean  @default(false) @map("is_primary")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  productMarket ProductMarket @relation(fields: [productMarketId], references: [id], onDelete: Cascade)
+
+  @@index([productMarketId, sortOrder])
+  @@map("product_market_images")
+}
+
+model ProductRegulatoryCheck {
+  id              String             @id @default(uuid()) @db.Uuid
+  productMarketId String             @map("product_market_id") @db.Uuid
+  marketId        String             @map("market_id") @db.Uuid
+  status          VerificationStatus
+  method          String
+  source          String
+  sourceUrl       String?            @map("source_url")
+  checkedAt       DateTime           @map("checked_at")
+  checkedBy       String?            @map("checked_by")
+  notes           String?
+  createdAt       DateTime           @default(now()) @map("created_at")
+
+  productMarket ProductMarket @relation(fields: [productMarketId], references: [id], onDelete: Cascade)
+  market        Market        @relation(fields: [marketId], references: [id])
+
+  @@index([productMarketId, checkedAt])
+  @@index([marketId, status])
+  @@map("product_regulatory_checks")
+}
+
 model Ingredient {
   id             String   @id @default(uuid()) @db.Uuid
   inciName       String   @map("inci_name")
@@ -275,8 +318,75 @@ model Ingredient {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   productMappings ProductMarketIngredient[]
+  localizations   IngredientLocalization[]
+  synonyms        IngredientSynonym[]
+  functions       IngredientFunction[]
+  flags           IngredientFlag[]
 
   @@map("ingredients")
+}
+
+model IngredientLocalization {
+  id          String   @id @default(uuid()) @db.Uuid
+  ingredientId String  @map("ingredient_id") @db.Uuid
+  locale      String
+  displayName String   @map("display_name")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([ingredientId, locale])
+  @@index([locale, displayName])
+  @@map("ingredient_localizations")
+}
+
+model IngredientSynonym {
+  id                String   @id @default(uuid()) @db.Uuid
+  ingredientId      String   @map("ingredient_id") @db.Uuid
+  locale            String   @default("und")
+  synonym           String
+  normalizedSynonym String   @map("normalized_synonym")
+  source            String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([ingredientId, locale, normalizedSynonym])
+  @@index([normalizedSynonym])
+  @@map("ingredient_synonyms")
+}
+
+model IngredientFunction {
+  id           String   @id @default(uuid()) @db.Uuid
+  ingredientId String   @map("ingredient_id") @db.Uuid
+  functionKey  String   @map("function_key")
+  labelTr      String?  @map("label_tr")
+  noteTr       String?  @map("note_tr")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([ingredientId, functionKey])
+  @@index([functionKey])
+  @@map("ingredient_functions")
+}
+
+model IngredientFlag {
+  id           String   @id @default(uuid()) @db.Uuid
+  ingredientId String   @map("ingredient_id") @db.Uuid
+  flagKey      String   @map("flag_key")
+  labelTr      String?  @map("label_tr")
+  noteTr       String?  @map("note_tr")
+  confidence   DataConfidence @default(low)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([ingredientId, flagKey])
+  @@index([flagKey])
+  @@map("ingredient_flags")
 }
 
 model ProductMarketIngredient {
