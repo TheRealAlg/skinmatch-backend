@@ -14,6 +14,12 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+
+        buildConfigField("String", "SKINMATCH_API_BASE_URL", "\"http://10.0.2.2:3000/\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 }
 
@@ -35,6 +41,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.9.8")
     implementation("com.squareup.okhttp3:okhttp:5.4.0")
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
+    implementation("com.squareup.retrofit2:converter-gson:3.0.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

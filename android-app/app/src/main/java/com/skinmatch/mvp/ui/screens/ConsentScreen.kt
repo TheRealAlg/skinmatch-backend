@@ -134,7 +134,7 @@ fun ConsentScreen(
                 ConsentCheckRow(
                     checked = uiState.consent.productDiscoveryResearchAccepted,
                     title = "Ürün keşfi geliştirme verisine izin veriyorum",
-                    body = "Opsiyonel. Mock arama davranışı gelecekte katalog kalitesini iyileştirmek için kullanılabilir.",
+                    body = "Opsiyonel. Arama davranışı gelecekte katalog kalitesini iyileştirmek için kullanılabilir.",
                     onCheckedChange = viewModel::setDiscoveryAccepted,
                 )
             }

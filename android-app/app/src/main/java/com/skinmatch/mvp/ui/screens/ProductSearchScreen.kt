@@ -1,17 +1,16 @@
 package com.skinmatch.mvp.ui.screens
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -21,7 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -36,7 +34,7 @@ import com.skinmatch.mvp.ui.components.EmptyState
 import com.skinmatch.mvp.ui.components.ErrorState
 import com.skinmatch.mvp.ui.components.LoadingState
 import com.skinmatch.mvp.ui.components.LowConfidenceState
-import com.skinmatch.mvp.ui.components.MockProductBottle
+import com.skinmatch.mvp.ui.components.ProductBottle
 import com.skinmatch.mvp.ui.components.SectionCard
 import com.skinmatch.mvp.ui.components.StateCard
 import com.skinmatch.mvp.ui.components.VerificationPill
@@ -82,7 +80,7 @@ class ProductSearchViewModel(
                     mutableState.value = mutableState.value.copy(
                         status = UiStatus.ERROR,
                         results = emptyList(),
-                        errorMessage = "Mock katalog araması tamamlanamadı. 'hata' sorgusu bu durumu test eder.",
+                        errorMessage = "Ürün kataloğu aranamadı. Backend bağlantısını ve yerel API adresini kontrol edin.",
                     )
                 }
         }
@@ -110,7 +108,7 @@ fun ProductSearchScreen(
     ) {
         Text("Ara", style = MaterialTheme.typography.displayMedium, color = Ink)
         Text(
-            "Türkiye pazarındaki mock ürünleri marka, kategori veya içerik adına göre arayın.",
+            "Türkiye pazarındaki ürünleri marka, kategori veya içerik adına göre arayın.",
             style = MaterialTheme.typography.bodyLarge,
             color = MutedInk,
         )
@@ -121,17 +119,17 @@ fun ProductSearchScreen(
             singleLine = true,
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
             label = { Text("Ürün, marka veya içerik") },
-            supportingText = { Text("Örnek: serum, niacinamide, bariyer, asit") },
+            supportingText = { Text("Örnek: niacinamide, serum, bariyer, temizleyici") },
         )
 
         when (uiState.status) {
             UiStatus.IDLE -> StateCard(
                 title = "Aramaya başlayın",
-                body = "Mock katalog ürün kartlarında veri güveni, Türkiye ürün durumu ve kısa not gösterilir.",
+                body = "Katalog kartlarında veri güveni, doğrulama durumu, pazar bilgisi ve sınırlı veri notları gösterilir.",
                 icon = Icons.Rounded.Search,
             )
-            UiStatus.LOADING -> LoadingState("Mock ürünler aranıyor")
-            UiStatus.EMPTY -> EmptyState("Bu sorgu için mock TR pazar ürününde eşleşme bulunamadı.")
+            UiStatus.LOADING -> LoadingState("Ürün kataloğu aranıyor")
+            UiStatus.EMPTY -> EmptyState("Bu sorgu için TR pazar kataloğunda eşleşme bulunamadı.")
             UiStatus.ERROR -> ErrorState(
                 body = uiState.errorMessage ?: "Arama sırasında sorun oluştu.",
                 onRetry = viewModel::retry,
@@ -155,7 +153,7 @@ private fun ProductResultCard(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MockProductBottle(
+            ProductBottle(
                 brand = product.brand,
                 modifier = Modifier.size(width = 86.dp, height = 118.dp),
             )
@@ -172,13 +170,25 @@ private fun ProductResultCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(product.category, style = MaterialTheme.typography.bodyMedium, color = MutedInk)
+                Text(
+                    "Pazar: ${product.marketCode} • Barkod: ${product.barcodeGtin.ifBlank { "yok" }}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MutedInk,
+                )
                 VerificationPill(product.verificationStatus)
                 ConfidencePill(product.dataConfidence)
             }
         }
+        if (product.verificationSource.isNotBlank()) {
+            Text(
+                "Kaynak: ${product.verificationSource}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MutedInk,
+            )
+        }
         Text(product.note, style = MaterialTheme.typography.bodyMedium, color = MutedInk)
-        if (product.dataConfidence == DataConfidence.LOW) {
-            LowConfidenceState("Bu ürün kartı düşük güvenli mock veriden üretildi. Güçlü uyum yorumu yapılmaz.")
+        if (product.dataConfidence == DataConfidence.LOW || product.dataConfidence == DataConfidence.UNKNOWN) {
+            LowConfidenceState("Bu ürün kartı sınırlı güvenle gösteriliyor. not_scored: güçlü uygunluk yorumu yapılmaz.")
         }
     }
 }

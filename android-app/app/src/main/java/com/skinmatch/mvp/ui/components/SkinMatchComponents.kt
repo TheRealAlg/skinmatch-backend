@@ -370,6 +370,7 @@ fun ConfidencePill(confidence: DataConfidence) {
         DataConfidence.HIGH -> SageLight to Sage
         DataConfidence.MEDIUM -> AmberLight to Amber
         DataConfidence.LOW -> WarningSoft to TerracottaDark
+        DataConfidence.UNKNOWN -> WarningSoft to TerracottaDark
     }
     AssistChip(
         onClick = {},
@@ -392,6 +393,14 @@ fun ConfidencePill(confidence: DataConfidence) {
 
 @Composable
 fun VerificationPill(status: VerificationStatus) {
+    val colors = when (status) {
+        VerificationStatus.UTS_CHECKED,
+        VerificationStatus.LABEL_REVIEWED,
+        VerificationStatus.RETAILER_SOURCED -> SageLight to Sage
+        VerificationStatus.USER_SUBMITTED -> AmberLight to Amber
+        VerificationStatus.UNVERIFIED,
+        VerificationStatus.UNKNOWN -> WarningSoft to TerracottaDark
+    }
     AssistChip(
         onClick = {},
         label = { Text(status.label) },
@@ -403,16 +412,16 @@ fun VerificationPill(status: VerificationStatus) {
             )
         },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = SageLight,
-            labelColor = Sage,
-            leadingIconContentColor = Sage,
+            containerColor = colors.first,
+            labelColor = colors.second,
+            leadingIconContentColor = colors.second,
         ),
         border = null,
     )
 }
 
 @Composable
-fun MockProductBottle(
+fun ProductBottle(
     brand: String,
     modifier: Modifier = Modifier,
 ) {

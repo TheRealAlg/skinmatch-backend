@@ -24,7 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.skinmatch.mvp.ui.components.BrandMark
-import com.skinmatch.mvp.ui.components.MockProductBottle
+import com.skinmatch.mvp.ui.components.ProductBottle
 import com.skinmatch.mvp.ui.components.PremiumBackground
 import com.skinmatch.mvp.ui.components.PrimaryActionButton
 import com.skinmatch.mvp.ui.components.ScreenColumn
@@ -61,7 +61,7 @@ fun WelcomeScreen(
                     .height(250.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                MockProductBottle(
+                ProductBottle(
                     brand = "Lumina",
                     modifier = Modifier.size(width = 172.dp, height = 230.dp),
                 )

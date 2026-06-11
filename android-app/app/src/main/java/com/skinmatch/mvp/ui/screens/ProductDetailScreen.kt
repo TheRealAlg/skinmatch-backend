@@ -8,11 +8,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Verified
-import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -30,23 +28,26 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.skinmatch.mvp.data.repository.ProductRepository
 import com.skinmatch.mvp.domain.models.DataConfidence
+import com.skinmatch.mvp.domain.models.IngredientFlag
+import com.skinmatch.mvp.domain.models.IngredientFunction
 import com.skinmatch.mvp.domain.models.IngredientItem
 import com.skinmatch.mvp.domain.models.ProductDetail
+import com.skinmatch.mvp.domain.models.RecommendationExplanation
 import com.skinmatch.mvp.domain.models.UiStatus
+import com.skinmatch.mvp.domain.models.VerificationStatus
 import com.skinmatch.mvp.ui.components.ConfidencePill
 import com.skinmatch.mvp.ui.components.ErrorState
 import com.skinmatch.mvp.ui.components.IngredientIcon
 import com.skinmatch.mvp.ui.components.InlineStatusRow
 import com.skinmatch.mvp.ui.components.LoadingState
 import com.skinmatch.mvp.ui.components.LowConfidenceState
-import com.skinmatch.mvp.ui.components.MockProductBottle
+import com.skinmatch.mvp.ui.components.ProductBottle
 import com.skinmatch.mvp.ui.components.PremiumBackground
 import com.skinmatch.mvp.ui.components.ScreenColumn
 import com.skinmatch.mvp.ui.components.SectionCard
 import com.skinmatch.mvp.ui.components.VerificationPill
 import com.skinmatch.mvp.ui.theme.Ink
 import com.skinmatch.mvp.ui.theme.MutedInk
-import com.skinmatch.mvp.ui.theme.Sage
 import com.skinmatch.mvp.ui.theme.Terracotta
 import com.skinmatch.mvp.ui.theme.TerracottaDark
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,7 +77,7 @@ class ProductDetailViewModel(
                 .onFailure {
                     mutableState.value = ProductDetailUiState(
                         status = UiStatus.ERROR,
-                        errorMessage = "Ürün detayı mock katalogda bulunamadı.",
+                        errorMessage = "Ürün detayı katalog API üzerinden açılamadı.",
                     )
                 }
         }
@@ -110,7 +111,7 @@ fun ProductDetailScreen(
             }
 
             when (uiState.status) {
-                UiStatus.LOADING -> LoadingState("Ürün detayı hazırlanıyor")
+                UiStatus.LOADING -> LoadingState("Ürün detayı yükleniyor")
                 UiStatus.ERROR -> ErrorState(
                     body = uiState.errorMessage ?: "Ürün detayı açılamadı.",
                     onRetry = { viewModel.load(productId) },
@@ -125,48 +126,31 @@ fun ProductDetailScreen(
 @Composable
 private fun ProductDetailContent(product: ProductDetail) {
     ProductHeader(product)
-    if (product.dataConfidence == DataConfidence.LOW) {
+
+    if (
+        product.dataConfidence == DataConfidence.LOW ||
+        product.dataConfidence == DataConfidence.UNKNOWN ||
+        product.recommendationExplanation.dataGaps.isNotEmpty()
+    ) {
         LowConfidenceState(product.confidenceNote)
     }
 
     SectionCard {
         InlineStatusRow(
             icon = Icons.Rounded.Verified,
-            title = "Yerel ürün durumu",
-            body = product.localStatusNote,
+            title = "Katalog doğrulaması",
+            body = verificationBody(product),
         )
         VerificationPill(product.verificationStatus)
         ConfidencePill(product.dataConfidence)
-    }
-
-    SectionCard {
-        InlineStatusRow(
-            icon = Icons.Rounded.Info,
-            title = "Cilt uyumu hazırlığı",
-            body = product.skinFitPlaceholder,
+        Text(
+            "Durum kodu: ${product.verificationStatus.backendCode()} • Veri güveni kodu: ${product.dataConfidence.backendCode()}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MutedInk,
         )
     }
 
-    BulletSection(
-        title = "Neden uygun olabilir",
-        items = product.whyThisMayFit,
-        iconTint = Sage,
-        icon = Icons.Rounded.CheckCircle,
-    )
-
-    BulletSection(
-        title = "Dikkat noktaları",
-        items = product.watchouts,
-        iconTint = TerracottaDark,
-        icon = Icons.Rounded.WarningAmber,
-    )
-
-    BulletSection(
-        title = "İçerik uyumluluğu",
-        items = product.compatibilityNotes,
-        iconTint = Sage,
-        icon = Icons.Rounded.Science,
-    )
+    RecommendationSection(product.recommendationExplanation)
 
     SectionCard {
         Text("Ham içerik metni", style = MaterialTheme.typography.titleLarge, color = Ink)
@@ -193,7 +177,7 @@ private fun ProductHeader(product: ProductDetail) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MockProductBottle(
+            ProductBottle(
                 brand = product.brand,
                 modifier = Modifier.size(width = 130.dp, height = 174.dp),
             )
@@ -209,30 +193,40 @@ private fun ProductHeader(product: ProductDetail) {
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Text(product.globalProductName, style = MaterialTheme.typography.bodyMedium, color = MutedInk)
                 Text(product.category, style = MaterialTheme.typography.bodyLarge, color = MutedInk)
-                Text("Doku: ${product.texture}", style = MaterialTheme.typography.bodyMedium, color = MutedInk)
+                Text(
+                    "Pazar: ${product.marketCode} • Barkod: ${product.barcodeGtin.ifBlank { "yok" }}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MutedInk,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun BulletSection(
-    title: String,
-    items: List<String>,
-    iconTint: androidx.compose.ui.graphics.Color,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-) {
+private fun RecommendationSection(explanation: RecommendationExplanation) {
     SectionCard {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = Ink)
-        items.forEach { item ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
-                Text(item, style = MaterialTheme.typography.bodyMedium, color = MutedInk)
-            }
+        InlineStatusRow(
+            icon = Icons.Rounded.Info,
+            title = "Öneri açıklaması",
+            body = "Durum: ${explanation.status} • Güven: ${explanation.confidence.backendCode()}",
+        )
+        if (explanation.notes.isNotEmpty()) {
+            Text("Notlar", style = MaterialTheme.typography.titleMedium, color = Ink)
+            explanation.notes.forEach { note -> DetailLine(note) }
+        }
+        if (explanation.dataGaps.isNotEmpty()) {
+            Text("Veri boşlukları", style = MaterialTheme.typography.titleMedium, color = Ink)
+            explanation.dataGaps.forEach { gap -> DetailLine(gap) }
+        }
+        if (explanation.status == "not_scored") {
+            Text(
+                "not_scored: Bu ekran yalnızca katalog bağlamı gösterir; öneri hesabı yapılmaz.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MutedInk,
+            )
         }
     }
 }
@@ -247,16 +241,77 @@ private fun IngredientRow(ingredient: IngredientItem) {
         verticalAlignment = Alignment.Top,
     ) {
         IngredientIcon()
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 "${ingredient.displayName} (${ingredient.inciName})",
                 style = MaterialTheme.typography.titleMedium,
                 color = Ink,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text(ingredient.function, style = MaterialTheme.typography.bodyMedium, color = MutedInk)
-            Text(ingredient.note, style = MaterialTheme.typography.bodyMedium, color = MutedInk)
-            ConfidencePill(ingredient.confidence)
+            if (ingredient.rawText.isNotBlank()) {
+                Text("Ham eşleşme: ${ingredient.rawText}", style = MaterialTheme.typography.bodyMedium, color = MutedInk)
+            }
+            ConfidencePill(ingredient.mappingConfidence)
+            Text(
+                "Eşleştirme güveni: ${ingredient.mappingConfidence.backendCode()}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MutedInk,
+            )
+            if (ingredient.functions.isNotEmpty()) {
+                Text("Fonksiyonlar", style = MaterialTheme.typography.titleSmall, color = Ink)
+                ingredient.functions.forEach { function -> FunctionLine(function) }
+            }
+            if (ingredient.flags.isNotEmpty()) {
+                Text("Bayraklar", style = MaterialTheme.typography.titleSmall, color = Ink)
+                ingredient.flags.forEach { flag -> FlagLine(flag) }
+            }
+            if (ingredient.synonyms.isNotEmpty()) {
+                Text(
+                    "Eş adlar: ${ingredient.synonyms.joinToString(", ")}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MutedInk,
+                )
+            }
         }
     }
+}
+
+@Composable
+private fun FunctionLine(function: IngredientFunction) {
+    val note = function.note?.takeIf { it.isNotBlank() }?.let { " - $it" }.orEmpty()
+    DetailLine("${function.label} (${function.key})$note")
+}
+
+@Composable
+private fun FlagLine(flag: IngredientFlag) {
+    val note = flag.note?.takeIf { it.isNotBlank() }?.let { " - $it" }.orEmpty()
+    DetailLine("${flag.label} (${flag.key}, ${flag.confidence.backendCode()})$note")
+}
+
+@Composable
+private fun DetailLine(text: String) {
+    Text("• $text", style = MaterialTheme.typography.bodyMedium, color = MutedInk)
+}
+
+private fun verificationBody(product: ProductDetail): String {
+    val method = product.verificationMethod.ifBlank { "yöntem belirtilmedi" }
+    val source = product.verificationSource.ifBlank { "kaynak belirtilmedi" }
+    val checkedAt = product.verificationCheckedAt.ifBlank { "tarih belirtilmedi" }
+    return "Yöntem: $method\nKaynak: $source\nKontrol tarihi: $checkedAt"
+}
+
+private fun DataConfidence.backendCode(): String = when (this) {
+    DataConfidence.HIGH -> "high"
+    DataConfidence.MEDIUM -> "medium"
+    DataConfidence.LOW -> "low"
+    DataConfidence.UNKNOWN -> "unknown"
+}
+
+private fun VerificationStatus.backendCode(): String = when (this) {
+    VerificationStatus.UNVERIFIED -> "unverified"
+    VerificationStatus.USER_SUBMITTED -> "user_submitted"
+    VerificationStatus.RETAILER_SOURCED -> "retailer_sourced"
+    VerificationStatus.LABEL_REVIEWED -> "label_reviewed"
+    VerificationStatus.UTS_CHECKED -> "uts_checked"
+    VerificationStatus.UNKNOWN -> "unknown"
 }

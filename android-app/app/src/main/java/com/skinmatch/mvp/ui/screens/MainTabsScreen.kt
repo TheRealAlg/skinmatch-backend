@@ -165,7 +165,7 @@ private fun HomeTab(
             InlineStatusRow(
                 icon = Icons.Rounded.Home,
                 title = "MVP ana sayfa",
-                body = "Bu sürüm yerel öneri skoru hesaplamaz. Ürün keşfi mock katalogla çalışır.",
+                body = "Bu sürüm yerel öneri skoru hesaplamaz. Ürün keşfi backend katalog API ile çalışır.",
             )
             PrimaryActionButton(text = "Ürün ara", onClick = onSearch)
         }
