@@ -156,6 +156,64 @@ describe("Product catalog read API (e2e)", () => {
     );
   });
 
+  it("ranks Postgres fallback search results across names, categories, and localized ingredients", async () => {
+    const cleanserResponse = await requestJson<SearchResponse>(
+      "/products/search?q=cleanser&limit=10"
+    );
+
+    expect(cleanserResponse.status).toBe(200);
+    const cleanserNames =
+      cleanserResponse.body.data?.products.map((product) => product.localProductName) ?? [];
+    const ceraVeCleanserIndex = cleanserNames.indexOf(
+      "Nemlendirici Yuz Temizleyici 236 ml"
+    );
+    const simpleCleanserIndex = cleanserNames.indexOf(
+      "Kind to Skin Nemlendirici Yuz Yikama Jeli"
+    );
+    expect(ceraVeCleanserIndex).toBeGreaterThanOrEqual(0);
+    expect(simpleCleanserIndex).toBeGreaterThanOrEqual(0);
+    expect(ceraVeCleanserIndex).toBeLessThan(simpleCleanserIndex);
+
+    const localizedIngredientResponse = await requestJson<SearchResponse>(
+      "/products/search?q=Sodyum%20Hiyaluronat&limit=10"
+    );
+    expect(localizedIngredientResponse.status).toBe(200);
+    expect(
+      localizedIngredientResponse.body.data?.products.map((product) => product.localProductName)
+    ).toEqual(
+      expect.arrayContaining([
+        "Nemlendirici Yuz Temizleyici 236 ml",
+        "Nemlendirici Krem 340 g",
+        "Niacinamide %10 + Zinc PCA Serum"
+      ])
+    );
+
+    const firstPage = await requestJson<SearchResponse>(
+      "/products/search?q=cerave&page=1&limit=1"
+    );
+    const secondPage = await requestJson<SearchResponse>(
+      "/products/search?q=cerave&page=2&limit=1"
+    );
+    const firstPageAgain = await requestJson<SearchResponse>(
+      "/products/search?q=cerave&page=1&limit=1"
+    );
+    const firstId = firstPage.body.data?.products[0]?.id;
+    const secondId = secondPage.body.data?.products[0]?.id;
+
+    expect(firstPage.status).toBe(200);
+    expect(secondPage.status).toBe(200);
+    expect(firstPage.body.data?.pagination).toEqual(
+      expect.objectContaining({ page: 1, limit: 1, totalPages: expect.any(Number) })
+    );
+    expect(secondPage.body.data?.pagination).toEqual(
+      expect.objectContaining({ page: 2, limit: 1, totalPages: expect.any(Number) })
+    );
+    expect(firstId).toBeDefined();
+    expect(secondId).toBeDefined();
+    expect(secondId).not.toBe(firstId);
+    expect(firstPageAgain.body.data?.products[0]?.id).toBe(firstId);
+  });
+
   it("returns product detail with localized ingredients, functions, flags, and no scoring claims", async () => {
     const response = await requestJson<ProductDetailResponse>(`/products/${productId}`);
 
