@@ -1,6 +1,14 @@
-# Skincare Backend
+# SkinMatch
 
-Turkey-first skincare intelligence backend.
+Turkey-first skincare intelligence monorepo.
+
+## Repo Layout
+
+```text
+skinmatch-backend/
+  skinmatch-backend/  # NestJS backend
+  android-app/        # Android MVP app shell
+```
 
 ## Sprint 1 Scope
 
@@ -15,6 +23,7 @@ Turkey-first skincare intelligence backend.
 ## Local Setup
 
 ```bash
+cd skinmatch-backend
 npm install
 cp .env.example .env
 docker compose up -d
@@ -58,6 +67,7 @@ DATABASE_URL=postgresql://skincare:skincare@localhost:5432/skincare_dev?schema=p
 Run the app setup against that database:
 
 ```bash
+cd skinmatch-backend
 npm run prisma:generate
 npm run prisma:validate
 npm run prisma:migrate -- --name init
@@ -67,3 +77,49 @@ npm run start:dev
 
 If the `skincare` role already exists, skip the `CREATE ROLE` command. If the
 database already exists with a non-UTF-8 encoding, recreate it before seeding.
+
+## Android MVP App Shell
+
+The Android MVP app lives in `android-app/`. It is a native Kotlin + Jetpack
+Compose app using Material 3, Navigation Compose, ViewModels, Flow, and mock
+repositories for product search/detail until product catalog APIs are ready.
+
+One-command run on Windows:
+
+```bash
+cd android-app
+.\run-app.cmd
+```
+
+You can also double-click `android-app/run-app.cmd`. The script finds the
+Android SDK, starts the default `DockJam_API36` emulator if no device is
+connected, builds the debug APK, installs it, and launches SkinMatch.
+
+Optional manual setup if the script cannot find your SDK:
+
+```properties
+sdk.dir=C\:\\Android\\Sdk
+```
+
+Manual build:
+
+```bash
+cd android-app
+./gradlew assembleDebug
+```
+
+Install on a running emulator or device:
+
+```bash
+cd android-app
+./gradlew installDebug
+```
+
+MVP notes:
+
+- Product search/detail uses mock Turkey-market fixtures.
+- Skin Profile V1 fields are represented with backend-facing IDs and Turkish UI labels.
+- Consent is required before writing the mock skin profile.
+- Product detail shows local product status, data confidence, raw ingredients, and normalized ingredient mappings.
+- The app does not calculate recommendation scores locally.
+- Backend dependencies still pending: product catalog search/detail DTOs, local verification status, ingredient normalization confidence, and future recommendation service output.

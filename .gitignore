@@ -6,3 +6,12 @@ coverage/
 !.env.example
 npm-debug.log*
 .DS_Store
+
+# Android app
+android-app/.gradle/
+android-app/.kotlin/
+android-app/build/
+android-app/app/build/
+android-app/local.properties
+android-app/.idea/
+android-app/*.png
