@@ -394,19 +394,27 @@ fun ConfidencePill(confidence: DataConfidence) {
 @Composable
 fun VerificationPill(status: VerificationStatus) {
     val colors = when (status) {
-        VerificationStatus.UTS_CHECKED,
+        VerificationStatus.UTS_CHECKED -> SageLight to Sage
         VerificationStatus.LABEL_REVIEWED,
-        VerificationStatus.RETAILER_SOURCED -> SageLight to Sage
+        VerificationStatus.RETAILER_SOURCED,
         VerificationStatus.USER_SUBMITTED -> AmberLight to Amber
         VerificationStatus.UNVERIFIED,
         VerificationStatus.UNKNOWN -> WarningSoft to TerracottaDark
+    }
+    val icon = when (status) {
+        VerificationStatus.UTS_CHECKED -> Icons.Rounded.Verified
+        VerificationStatus.LABEL_REVIEWED,
+        VerificationStatus.RETAILER_SOURCED,
+        VerificationStatus.USER_SUBMITTED -> Icons.Rounded.HourglassTop
+        VerificationStatus.UNVERIFIED,
+        VerificationStatus.UNKNOWN -> Icons.Rounded.Info
     }
     AssistChip(
         onClick = {},
         label = { Text(status.label) },
         leadingIcon = {
             Icon(
-                Icons.Rounded.Verified,
+                icon,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
             )
