@@ -370,13 +370,13 @@ export async function seedDatabase(client: PrismaClient = prisma) {
       update: {
         defaultLocale: "tr-TR",
         currencyCode: "TRY",
-        regulatoryContext: "T\u0130TCK / \u00dcTS"
+        regulatoryContext: "TITCK / UTS"
       },
       create: {
         marketCode: "TR",
         defaultLocale: "tr-TR",
         currencyCode: "TRY",
-        regulatoryContext: "T\u0130TCK / \u00dcTS"
+        regulatoryContext: "TITCK / UTS"
       }
     });
 

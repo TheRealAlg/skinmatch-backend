@@ -60,13 +60,17 @@ class ProductSearchViewModel(
     val uiState: StateFlow<ProductSearchUiState> = mutableState.asStateFlow()
     private var searchJob: Job? = null
 
+    init {
+        loadProducts("")
+    }
+
     fun onQueryChanged(query: String) {
         mutableState.value = mutableState.value.copy(query = query, errorMessage = null)
+        loadProducts(query)
+    }
+
+    private fun loadProducts(query: String) {
         searchJob?.cancel()
-        if (query.isBlank()) {
-            mutableState.value = ProductSearchUiState(query = query, status = UiStatus.IDLE)
-            return
-        }
         searchJob = viewModelScope.launch {
             mutableState.value = mutableState.value.copy(status = UiStatus.LOADING)
             runCatching { productRepository.search(query) }
@@ -80,7 +84,7 @@ class ProductSearchViewModel(
                     mutableState.value = mutableState.value.copy(
                         status = UiStatus.ERROR,
                         results = emptyList(),
-                        errorMessage = "Ürün kataloğu aranamadı. Backend bağlantısını ve yerel API adresini kontrol edin.",
+                        errorMessage = "Ürün kataloğu alınamadı. Yerel backend'in çalıştığını ve seed verisinin yüklendiğini kontrol edin.",
                     )
                 }
         }
@@ -108,7 +112,7 @@ fun ProductSearchScreen(
     ) {
         Text("Ara", style = MaterialTheme.typography.displayMedium, color = Ink)
         Text(
-            "Türkiye pazarındaki ürünleri marka, kategori veya içerik adına göre arayın.",
+            "Türkiye pazarındaki ürünleri inceleyin ya da marka, kategori veya içerik adına göre arayın.",
             style = MaterialTheme.typography.bodyLarge,
             color = MutedInk,
         )
@@ -119,17 +123,23 @@ fun ProductSearchScreen(
             singleLine = true,
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
             label = { Text("Ürün, marka veya içerik") },
-            supportingText = { Text("Örnek: niacinamide, serum, bariyer, temizleyici") },
+            supportingText = { Text("Boş bırakınca ilk katalog ürünleri listelenir. Örnek: niacinamide, serum, temizleyici") },
         )
 
         when (uiState.status) {
             UiStatus.IDLE -> StateCard(
-                title = "Aramaya başlayın",
+                title = "Katalog hazırlanıyor",
                 body = "Katalog kartlarında veri güveni, doğrulama durumu, pazar bilgisi ve sınırlı veri notları gösterilir.",
                 icon = Icons.Rounded.Search,
             )
             UiStatus.LOADING -> LoadingState("Ürün kataloğu aranıyor")
-            UiStatus.EMPTY -> EmptyState("Bu sorgu için TR pazar kataloğunda eşleşme bulunamadı.")
+            UiStatus.EMPTY -> EmptyState(
+                if (uiState.query.isBlank()) {
+                    "TR pazar kataloğunda henüz ürün yok. Backend seed verisini yükleyip tekrar deneyin."
+                } else {
+                    "Bu sorgu için TR pazar kataloğunda eşleşme bulunamadı."
+                },
+            )
             UiStatus.ERROR -> ErrorState(
                 body = uiState.errorMessage ?: "Arama sırasında sorun oluştu.",
                 onRetry = viewModel::retry,

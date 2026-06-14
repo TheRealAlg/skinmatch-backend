@@ -49,7 +49,7 @@ interface SkinMatchApi {
 
     @GET("api/v1/products/search")
     suspend fun searchProducts(
-        @Query("q") query: String,
+        @Query("q") query: String? = null,
         @Query("marketCode") marketCode: String = "TR",
         @Query("page") page: Int = 1,
         @Query("limit") limit: Int = 20,

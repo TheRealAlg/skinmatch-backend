@@ -39,10 +39,8 @@ class RetrofitProductRepository(
 ) : ProductRepository {
     override suspend fun search(query: String): List<ProductSearchResult> {
         val trimmedQuery = query.trim()
-        if (trimmedQuery.isBlank()) return emptyList()
-
         val data = api.searchProducts(
-            query = trimmedQuery,
+            query = trimmedQuery.takeIf { it.isNotBlank() },
             marketCode = "TR",
             page = 1,
             limit = 20,

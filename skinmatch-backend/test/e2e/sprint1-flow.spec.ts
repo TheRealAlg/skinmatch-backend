@@ -70,13 +70,13 @@ describe("Sprint 1 API flow (e2e)", () => {
       update: {
         defaultLocale: "tr-TR",
         currencyCode: "TRY",
-        regulatoryContext: "T\u0130TCK / \u00dcTS"
+        regulatoryContext: "TITCK / UTS"
       },
       create: {
         marketCode: "TR",
         defaultLocale: "tr-TR",
         currencyCode: "TRY",
-        regulatoryContext: "T\u0130TCK / \u00dcTS"
+        regulatoryContext: "TITCK / UTS"
       }
     });
   });

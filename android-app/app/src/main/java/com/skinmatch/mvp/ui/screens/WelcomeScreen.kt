@@ -1,21 +1,20 @@
 package com.skinmatch.mvp.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.FactCheck
-import androidx.compose.material.icons.rounded.Shield
-import androidx.compose.material.icons.rounded.Spa
+import androidx.compose.material.icons.rounded.FaceRetouchingNatural
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -23,12 +22,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.skinmatch.mvp.R
 import com.skinmatch.mvp.ui.components.BrandMark
 import com.skinmatch.mvp.ui.components.PremiumBackground
 import com.skinmatch.mvp.ui.components.PrimaryActionButton
-import com.skinmatch.mvp.ui.components.ProductStillLifeHero
 import com.skinmatch.mvp.ui.components.ScreenColumn
 import com.skinmatch.mvp.ui.components.SecondaryActionButton
 import com.skinmatch.mvp.ui.components.SectionCard
@@ -36,7 +37,6 @@ import com.skinmatch.mvp.ui.theme.CreamDeep
 import com.skinmatch.mvp.ui.theme.Ink
 import com.skinmatch.mvp.ui.theme.MutedInk
 import com.skinmatch.mvp.ui.theme.Sage
-import com.skinmatch.mvp.ui.theme.Surface
 import com.skinmatch.mvp.ui.theme.TerracottaDark
 
 @Composable
@@ -58,15 +58,14 @@ fun WelcomeScreen(
                 color = MutedInk,
             )
 
-            ProductStillLifeHero()
+            WelcomeHeroArtwork()
 
             SectionCard {
                 TrustRow(
-                    icon = Icons.Rounded.Spa,
-                    title = "Profil odaklı keşif",
+                    icon = Icons.Rounded.FaceRetouchingNatural,
+                    title = "Cildinize göre kişiselleştirilir",
                     body = "Cilt tipi, hassasiyet, gözenek, siyah nokta eğilimi ve içerik geçmişi birlikte değerlendirilir.",
                 )
-                WelcomeSignalStrip()
             }
 
             Spacer(modifier = Modifier.weight(1f, fill = false))
@@ -76,36 +75,18 @@ fun WelcomeScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun WelcomeSignalStrip() {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        WelcomeSignal("TR katalog", Icons.AutoMirrored.Rounded.FactCheck)
-        WelcomeSignal("Veri güveni", Icons.Rounded.Shield)
-        WelcomeSignal("not_scored", Icons.Rounded.Spa)
-    }
-}
-
-@Composable
-private fun WelcomeSignal(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-) {
-    Row(
+private fun WelcomeHeroArtwork() {
+    Image(
+        painter = painterResource(id = R.drawable.welcome_hero_products),
+        contentDescription = "Cilt bakımı ürünleri ve krem dokusu",
         modifier = Modifier
-            .clip(CircleShape)
-            .background(Surface.copy(alpha = 0.86f))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, contentDescription = null, tint = Sage, modifier = Modifier.size(16.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, color = TerracottaDark)
-    }
+            .fillMaxWidth()
+            .height(310.dp)
+            .clip(RoundedCornerShape(8.dp)),
+        contentScale = ContentScale.Crop,
+        alignment = Alignment.Center,
+    )
 }
 
 @Composable
