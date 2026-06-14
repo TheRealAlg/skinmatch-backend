@@ -4,11 +4,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import com.google.gson.GsonBuilder
 import com.skinmatch.mvp.BuildConfig
 import com.skinmatch.mvp.data.api.SkinMatchApi
+import com.skinmatch.mvp.data.repository.BackendSessionRepository
 import com.skinmatch.mvp.data.repository.ConsentRepository
-import com.skinmatch.mvp.data.repository.MockConsentRepository
-import com.skinmatch.mvp.data.repository.MockSkinProfileRepository
 import com.skinmatch.mvp.data.repository.ProductRepository
+import com.skinmatch.mvp.data.repository.RetrofitConsentRepository
 import com.skinmatch.mvp.data.repository.RetrofitProductRepository
+import com.skinmatch.mvp.data.repository.RetrofitSkinProfileRepository
+import com.skinmatch.mvp.data.repository.SessionRepository
 import com.skinmatch.mvp.data.repository.SkinProfileRepository
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -24,8 +26,9 @@ class AppContainer {
         .build()
     private val skinMatchApi: SkinMatchApi = retrofit.create(SkinMatchApi::class.java)
 
-    val consentRepository: ConsentRepository = MockConsentRepository()
-    val skinProfileRepository: SkinProfileRepository = MockSkinProfileRepository()
+    private val sessionRepository: SessionRepository = BackendSessionRepository(skinMatchApi)
+    val consentRepository: ConsentRepository = RetrofitConsentRepository(skinMatchApi, sessionRepository)
+    val skinProfileRepository: SkinProfileRepository = RetrofitSkinProfileRepository(skinMatchApi, sessionRepository)
     val productRepository: ProductRepository = RetrofitProductRepository(skinMatchApi)
 }
 

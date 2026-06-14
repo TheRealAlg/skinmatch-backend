@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -59,25 +60,32 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.skinmatch.mvp.domain.models.DataConfidence
 import com.skinmatch.mvp.domain.models.VerificationStatus
 import com.skinmatch.mvp.ui.theme.Amber
 import com.skinmatch.mvp.ui.theme.AmberLight
+import com.skinmatch.mvp.ui.theme.AmberGlass
 import com.skinmatch.mvp.ui.theme.Cream
 import com.skinmatch.mvp.ui.theme.CreamDeep
 import com.skinmatch.mvp.ui.theme.Ink
 import com.skinmatch.mvp.ui.theme.MutedInk
 import com.skinmatch.mvp.ui.theme.OutlineWarm
+import com.skinmatch.mvp.ui.theme.Petal
 import com.skinmatch.mvp.ui.theme.Sage
 import com.skinmatch.mvp.ui.theme.SageLight
 import com.skinmatch.mvp.ui.theme.Surface
+import com.skinmatch.mvp.ui.theme.TealMist
 import com.skinmatch.mvp.ui.theme.Terracotta
 import com.skinmatch.mvp.ui.theme.TerracottaDark
 import com.skinmatch.mvp.ui.theme.TerracottaLight
@@ -91,26 +99,52 @@ fun PremiumBackground(content: @Composable () -> Unit) {
             .background(Cream),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val path = Path().apply {
-                moveTo(size.width * 0.62f, 0f)
+            val upperSweep = Path().apply {
+                moveTo(size.width * 0.52f, 0f)
                 cubicTo(
-                    size.width * 0.93f,
-                    size.height * 0.08f,
-                    size.width * 0.72f,
+                    size.width * 0.94f,
+                    size.height * 0.06f,
+                    size.width * 0.66f,
                     size.height * 0.18f,
                     size.width,
                     size.height * 0.28f,
                 )
             }
             drawPath(
-                path = path,
+                path = upperSweep,
                 color = CreamDeep.copy(alpha = 0.65f),
                 style = Stroke(width = 24f, cap = StrokeCap.Round),
             )
-            drawCircle(
-                color = TerracottaLight.copy(alpha = 0.16f),
-                radius = size.width * 0.35f,
-                center = Offset(size.width * 0.92f, size.height * 0.06f),
+            val lowerSweep = Path().apply {
+                moveTo(-size.width * 0.08f, size.height * 0.46f)
+                cubicTo(
+                    size.width * 0.12f,
+                    size.height * 0.38f,
+                    size.width * 0.34f,
+                    size.height * 0.58f,
+                    size.width * 0.04f,
+                    size.height * 0.7f,
+                )
+            }
+            drawPath(
+                path = lowerSweep,
+                color = Petal.copy(alpha = 0.38f),
+                style = Stroke(width = 18f, cap = StrokeCap.Round),
+            )
+            drawPath(
+                path = Path().apply {
+                    moveTo(size.width * 0.74f, size.height * 0.52f)
+                    cubicTo(
+                        size.width * 0.94f,
+                        size.height * 0.58f,
+                        size.width * 0.83f,
+                        size.height * 0.72f,
+                        size.width * 1.08f,
+                        size.height * 0.82f,
+                    )
+                },
+                color = TealMist.copy(alpha = 0.22f),
+                style = Stroke(width = 16f, cap = StrokeCap.Round),
             )
         }
         content()
@@ -479,6 +513,262 @@ fun ProductBottle(
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+fun ProductStillLifeHero(
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(285.dp),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val creamSwipe = Path().apply {
+                moveTo(size.width * 0.06f, size.height * 0.72f)
+                cubicTo(
+                    size.width * 0.24f,
+                    size.height * 0.44f,
+                    size.width * 0.58f,
+                    size.height * 0.5f,
+                    size.width * 0.94f,
+                    size.height * 0.33f,
+                )
+            }
+            drawPath(
+                path = creamSwipe,
+                brush = Brush.linearGradient(
+                    listOf(Surface.copy(alpha = 0.2f), CreamDeep, Surface.copy(alpha = 0.55f)),
+                ),
+                style = Stroke(width = 32f, cap = StrokeCap.Round),
+            )
+            drawPath(
+                path = creamSwipe,
+                color = OutlineWarm.copy(alpha = 0.44f),
+                style = Stroke(width = 2f, cap = StrokeCap.Round),
+            )
+            drawOval(
+                color = AmberLight.copy(alpha = 0.8f),
+                topLeft = Offset(size.width * 0.58f, size.height * 0.24f),
+                size = Size(size.width * 0.22f, size.height * 0.1f),
+            )
+            drawCircle(
+                color = Surface.copy(alpha = 0.9f),
+                radius = size.width * 0.035f,
+                center = Offset(size.width * 0.72f, size.height * 0.18f),
+            )
+            drawCircle(
+                color = Surface.copy(alpha = 0.82f),
+                radius = size.width * 0.026f,
+                center = Offset(size.width * 0.82f, size.height * 0.22f),
+            )
+            drawOval(
+                color = Color(0xFFB98E80).copy(alpha = 0.12f),
+                topLeft = Offset(size.width * 0.12f, size.height * 0.88f),
+                size = Size(size.width * 0.76f, size.height * 0.09f),
+            )
+            drawRoundRect(
+                color = Surface.copy(alpha = 0.72f),
+                topLeft = Offset(size.width * 0.05f, size.height * 0.74f),
+                size = Size(size.width * 0.9f, size.height * 0.2f),
+                cornerRadius = CornerRadius(22f, 22f),
+            )
+        }
+
+        HeroTube(
+            brand = "SkinMatch",
+            title = "Gentle\nCleanser",
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = 12.dp, y = (-12).dp)
+                .size(width = 112.dp, height = 178.dp)
+                .zIndex(2f),
+        )
+        HeroDropper(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(x = (-28).dp, y = (-4).dp)
+                .size(width = 82.dp, height = 164.dp)
+                .zIndex(3f),
+        )
+        HeroJar(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(x = 52.dp, y = 0.dp)
+                .size(width = 132.dp, height = 116.dp)
+                .zIndex(4f),
+        )
+        HeroTube(
+            brand = "SkinMatch",
+            title = "Daily\nShield",
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = (-10).dp, y = (-14).dp)
+                .size(width = 94.dp, height = 162.dp)
+                .zIndex(1f),
+            accent = TealMist,
+        )
+    }
+}
+
+@Composable
+private fun HeroTube(
+    brand: String,
+    title: String,
+    modifier: Modifier,
+    accent: Color = Petal,
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawRoundRect(
+                color = Color(0xFFB98E80).copy(alpha = 0.16f),
+                topLeft = Offset(size.width * 0.12f, size.height * 0.82f),
+                size = Size(size.width * 0.78f, size.height * 0.08f),
+                cornerRadius = CornerRadius(18f, 18f),
+            )
+            drawRoundRect(
+                brush = Brush.verticalGradient(listOf(Surface, CreamDeep)),
+                topLeft = Offset(size.width * 0.15f, size.height * 0.06f),
+                size = Size(size.width * 0.7f, size.height * 0.82f),
+                cornerRadius = CornerRadius(28f, 28f),
+            )
+            drawRoundRect(
+                color = accent.copy(alpha = 0.62f),
+                topLeft = Offset(size.width * 0.18f, size.height * 0.76f),
+                size = Size(size.width * 0.64f, size.height * 0.13f),
+                cornerRadius = CornerRadius(18f, 18f),
+            )
+            drawLine(
+                color = OutlineWarm,
+                start = Offset(size.width * 0.18f, size.height * 0.16f),
+                end = Offset(size.width * 0.82f, size.height * 0.16f),
+                strokeWidth = 3f,
+            )
+        }
+        Column(
+            modifier = Modifier.padding(horizontal = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            Text(
+                text = brand.uppercase(),
+                color = TerracottaDark,
+                fontSize = 9.sp,
+                lineHeight = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = title.uppercase(),
+                color = Ink,
+                fontSize = 9.sp,
+                lineHeight = 11.sp,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeroDropper(modifier: Modifier) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawRoundRect(
+                color = Color(0xFFB98E80).copy(alpha = 0.14f),
+                topLeft = Offset(size.width * 0.14f, size.height * 0.84f),
+                size = Size(size.width * 0.72f, size.height * 0.08f),
+                cornerRadius = CornerRadius(16f, 16f),
+            )
+            drawRoundRect(
+                brush = Brush.verticalGradient(listOf(Color(0xFF8B542F), AmberGlass)),
+                topLeft = Offset(size.width * 0.22f, size.height * 0.34f),
+                size = Size(size.width * 0.56f, size.height * 0.54f),
+                cornerRadius = CornerRadius(24f, 24f),
+            )
+            drawRoundRect(
+                color = Surface.copy(alpha = 0.94f),
+                topLeft = Offset(size.width * 0.3f, size.height * 0.62f),
+                size = Size(size.width * 0.4f, size.height * 0.16f),
+                cornerRadius = CornerRadius(10f, 10f),
+            )
+            drawRoundRect(
+                color = Color(0xFFC29A89),
+                topLeft = Offset(size.width * 0.36f, size.height * 0.2f),
+                size = Size(size.width * 0.28f, size.height * 0.16f),
+                cornerRadius = CornerRadius(10f, 10f),
+            )
+            drawRoundRect(
+                color = CreamDeep,
+                topLeft = Offset(size.width * 0.39f, size.height * 0.08f),
+                size = Size(size.width * 0.22f, size.height * 0.14f),
+                cornerRadius = CornerRadius(14f, 14f),
+            )
+        }
+        Text(
+            text = "BARRIER\nSERUM",
+            modifier = Modifier.padding(top = 56.dp),
+            color = TerracottaDark,
+            fontSize = 8.sp,
+            lineHeight = 10.sp,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun HeroJar(modifier: Modifier) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawRoundRect(
+                color = Color(0xFFB98E80).copy(alpha = 0.14f),
+                topLeft = Offset(size.width * 0.12f, size.height * 0.82f),
+                size = Size(size.width * 0.76f, size.height * 0.1f),
+                cornerRadius = CornerRadius(22f, 22f),
+            )
+            drawRoundRect(
+                brush = Brush.verticalGradient(listOf(Color(0xFFD6B4A7), Color(0xFFB68575))),
+                topLeft = Offset(size.width * 0.18f, size.height * 0.16f),
+                size = Size(size.width * 0.64f, size.height * 0.22f),
+                cornerRadius = CornerRadius(20f, 20f),
+            )
+            drawRoundRect(
+                brush = Brush.verticalGradient(listOf(Surface, CreamDeep)),
+                topLeft = Offset(size.width * 0.13f, size.height * 0.33f),
+                size = Size(size.width * 0.74f, size.height * 0.5f),
+                cornerRadius = CornerRadius(24f, 24f),
+            )
+            drawLine(
+                color = OutlineWarm.copy(alpha = 0.85f),
+                start = Offset(size.width * 0.18f, size.height * 0.42f),
+                end = Offset(size.width * 0.82f, size.height * 0.42f),
+                strokeWidth = 2f,
+            )
+        }
+        Text(
+            text = "RESTORE\nCREAM",
+            modifier = Modifier.padding(top = 34.dp),
+            color = TerracottaDark,
+            fontSize = 9.sp,
+            lineHeight = 11.sp,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }

@@ -126,7 +126,7 @@ fun ProfileSummaryContent(
             SummarySection(
                 icon = Icons.Rounded.FaceRetouchingNatural,
                 title = "Cilt davranışı",
-                body = "Profil alanlarınız backend V1 adlarıyla saklanmaya hazır.",
+                body = "Profil alanlarınız backend V1 sözleşmesiyle saklanır.",
             ) {
                 SkinProfileFields.forEach { field ->
                     Text(

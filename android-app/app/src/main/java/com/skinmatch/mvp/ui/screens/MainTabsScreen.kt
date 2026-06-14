@@ -178,7 +178,7 @@ private fun HomeTab(
                 InlineStatusRow(
                     icon = Icons.Rounded.Spa,
                     title = "Profil hazır",
-                    body = "Cilt profili V1 alanları mock depoda kayıtlı. Backend profil API entegrasyonu sonraki adım.",
+                    body = "Cilt profili V1 alanları backend profil API üzerinden saklanır.",
                 )
             }
         }

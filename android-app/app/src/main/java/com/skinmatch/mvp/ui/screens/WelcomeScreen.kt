@@ -3,13 +3,15 @@ package com.skinmatch.mvp.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.FactCheck
 import androidx.compose.material.icons.rounded.Shield
@@ -24,9 +26,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.skinmatch.mvp.ui.components.BrandMark
-import com.skinmatch.mvp.ui.components.ProductBottle
 import com.skinmatch.mvp.ui.components.PremiumBackground
 import com.skinmatch.mvp.ui.components.PrimaryActionButton
+import com.skinmatch.mvp.ui.components.ProductStillLifeHero
 import com.skinmatch.mvp.ui.components.ScreenColumn
 import com.skinmatch.mvp.ui.components.SecondaryActionButton
 import com.skinmatch.mvp.ui.components.SectionCard
@@ -34,6 +36,7 @@ import com.skinmatch.mvp.ui.theme.CreamDeep
 import com.skinmatch.mvp.ui.theme.Ink
 import com.skinmatch.mvp.ui.theme.MutedInk
 import com.skinmatch.mvp.ui.theme.Sage
+import com.skinmatch.mvp.ui.theme.Surface
 import com.skinmatch.mvp.ui.theme.TerracottaDark
 
 @Composable
@@ -50,45 +53,58 @@ fun WelcomeScreen(
                 color = Ink,
             )
             Text(
-                text = "Türkiye pazarındaki ürünleri cilt profiliniz, içerik uyumu ve veri güveniyle birlikte keşfedin.",
+                text = "Türkiye’de satılan ürünleri; cilt profiliniz, içerik geçmişiniz ve veri güveniyle birlikte okuyun.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MutedInk,
             )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                ProductBottle(
-                    brand = "Lumina",
-                    modifier = Modifier.size(width = 172.dp, height = 230.dp),
-                )
-            }
+            ProductStillLifeHero()
 
             SectionCard {
                 TrustRow(
                     icon = Icons.Rounded.Spa,
                     title = "Profil odaklı keşif",
-                    body = "Cilt tipi, hassasiyet, gözenek ve hedef bilgileriyle başlar.",
+                    body = "Cilt tipi, hassasiyet, gözenek, siyah nokta eğilimi ve içerik geçmişi birlikte değerlendirilir.",
                 )
-                TrustRow(
-                    icon = Icons.AutoMirrored.Rounded.FactCheck,
-                    title = "Yerel veri güveni",
-                    body = "Ürün verisi TR pazarı, ÜTS bağlamı ve içerik doğrulamasıyla ayrılır.",
-                )
-                TrustRow(
-                    icon = Icons.Rounded.Shield,
-                    title = "Temkinli dil",
-                    body = "Tanı, tedavi veya kesin sonuç iddiası yerine uyumluluk sinyalleri gösterilir.",
-                )
+                WelcomeSignalStrip()
             }
 
             Spacer(modifier = Modifier.weight(1f, fill = false))
             PrimaryActionButton(text = "Cilt profilimi oluştur", onClick = onBuildProfile)
-            SecondaryActionButton(text = "Ürünleri keşfet", onClick = onBrowseProducts)
+            SecondaryActionButton(text = "Misafir olarak incele", onClick = onBrowseProducts)
         }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WelcomeSignalStrip() {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        WelcomeSignal("TR katalog", Icons.AutoMirrored.Rounded.FactCheck)
+        WelcomeSignal("Veri güveni", Icons.Rounded.Shield)
+        WelcomeSignal("not_scored", Icons.Rounded.Spa)
+    }
+}
+
+@Composable
+private fun WelcomeSignal(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+) {
+    Row(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(Surface.copy(alpha = 0.86f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, contentDescription = null, tint = Sage, modifier = Modifier.size(16.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, color = TerracottaDark)
     }
 }
 
@@ -106,6 +122,7 @@ private fun TrustRow(
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
+                .background(CreamDeep)
                 .padding(2.dp),
             contentAlignment = Alignment.Center,
         ) {

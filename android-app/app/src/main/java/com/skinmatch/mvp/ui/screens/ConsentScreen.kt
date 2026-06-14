@@ -25,6 +25,7 @@ import androidx.lifecycle.viewModelScope
 import com.skinmatch.mvp.data.repository.ConsentRepository
 import com.skinmatch.mvp.data.repository.ConsentState
 import com.skinmatch.mvp.ui.components.BrandMark
+import com.skinmatch.mvp.ui.components.ErrorState
 import com.skinmatch.mvp.ui.components.InlineStatusRow
 import com.skinmatch.mvp.ui.components.PremiumBackground
 import com.skinmatch.mvp.ui.components.PrimaryActionButton
@@ -40,6 +41,7 @@ import kotlinx.coroutines.launch
 data class ConsentUiState(
     val consent: ConsentState = ConsentState(),
     val saving: Boolean = false,
+    val errorMessage: String? = null,
 ) {
     val canContinue: Boolean
         get() = consent.canWriteSensitiveProfile
@@ -62,18 +64,21 @@ class ConsentViewModel(
     fun setPrivacyAccepted(value: Boolean) {
         mutableState.value = mutableState.value.copy(
             consent = mutableState.value.consent.copy(privacyNoticeAccepted = value),
+            errorMessage = null,
         )
     }
 
     fun setProfileAccepted(value: Boolean) {
         mutableState.value = mutableState.value.copy(
             consent = mutableState.value.consent.copy(skinProfileProcessingAccepted = value),
+            errorMessage = null,
         )
     }
 
     fun setDiscoveryAccepted(value: Boolean) {
         mutableState.value = mutableState.value.copy(
             consent = mutableState.value.consent.copy(productDiscoveryResearchAccepted = value),
+            errorMessage = null,
         )
     }
 
@@ -81,9 +86,16 @@ class ConsentViewModel(
         val nextConsent = mutableState.value.consent
         viewModelScope.launch {
             mutableState.value = mutableState.value.copy(saving = true)
-            consentRepository.updateConsent(nextConsent)
-            mutableState.value = mutableState.value.copy(saving = false)
-            onSaved()
+            try {
+                consentRepository.updateConsent(nextConsent)
+                mutableState.value = mutableState.value.copy(saving = false, errorMessage = null)
+                onSaved()
+            } catch (error: Throwable) {
+                mutableState.value = mutableState.value.copy(
+                    saving = false,
+                    errorMessage = "Onaylar backend'e kaydedilemedi. Yerel API çalışıyorsa tekrar deneyin.",
+                )
+            }
         }
     }
 }
@@ -109,13 +121,17 @@ fun ConsentScreen(
                 InlineStatusRow(
                     icon = Icons.Rounded.Lock,
                     title = "KVKK ve gizlilik",
-                    body = "Bu MVP verileri yalnızca cihaz içindeki mock depolarda tutar. Backend bağlanınca aynı onay kapısı kullanılacak.",
+                    body = "Onaylar backend hesabınızda saklanır ve cilt profili yazmadan önce tekrar kontrol edilir.",
                 )
                 InlineStatusRow(
                     icon = Icons.Rounded.Policy,
                     title = "Tıbbi yönlendirme değil",
                     body = "Ürün notları tanı, tedavi veya kesin sonuç anlamına gelmez.",
                 )
+            }
+
+            uiState.errorMessage?.let { message ->
+                ErrorState(body = message)
             }
 
             SectionCard {

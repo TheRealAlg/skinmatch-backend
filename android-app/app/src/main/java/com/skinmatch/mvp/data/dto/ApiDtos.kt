@@ -18,6 +18,96 @@ data class ErrorDto(
     val details: JsonElement? = null,
 )
 
+data class CreateSessionRequestDto(
+    val idToken: String,
+)
+
+data class AuthSessionEnvelopeDto(
+    val user: AuthUserDto? = null,
+    val accessToken: String? = null,
+)
+
+data class AuthUserDto(
+    val id: String? = null,
+    val email: String? = null,
+    val displayName: String? = null,
+    val defaultMarket: String? = null,
+    val locale: String? = null,
+)
+
+data class ConsentsEnvelopeDto(
+    val consents: List<ConsentDto> = emptyList(),
+)
+
+data class ConsentDto(
+    val consentType: String? = null,
+    val consentVersion: String? = null,
+    val status: String? = null,
+    val locale: String? = null,
+    val marketCode: String? = null,
+    val acceptedAt: String? = null,
+    val revokedAt: String? = null,
+)
+
+data class UpsertConsentRequestDto(
+    val consentType: String,
+    val consentVersion: String,
+    val status: String,
+    val locale: String = "tr-TR",
+    val marketCode: String = "TR",
+)
+
+data class SkinProfileEnvelopeDto(
+    val profile: SkinProfileDto? = null,
+)
+
+data class SkinProfileDto(
+    val skinType: String? = null,
+    val sensitivityLevel: String? = null,
+    val oilinessPattern: String? = null,
+    val drynessPattern: String? = null,
+    val poresLevel: String? = null,
+    val blackheadTendency: String? = null,
+    val cloggedPoreTendency: String? = null,
+    val acneTendency: String? = null,
+    val rednessTendency: String? = null,
+    val hyperpigmentationLevel: String? = null,
+    val textureConcernLevel: String? = null,
+    val dehydrationLevel: String? = null,
+    val barrierDamageLevel: String? = null,
+    val goals: List<SkinGoalDto> = emptyList(),
+    val triggers: List<KnownTriggerDto> = emptyList(),
+)
+
+data class SkinGoalDto(
+    val goalKey: String? = null,
+    val priority: Int? = null,
+)
+
+data class KnownTriggerDto(
+    val triggerKey: String? = null,
+    val severity: String? = null,
+    val source: String? = null,
+)
+
+data class UpdateSkinProfileRequestDto(
+    val skinType: String,
+    val sensitivityLevel: String,
+    val oilinessPattern: String,
+    val drynessPattern: String,
+    val poresLevel: String,
+    val blackheadTendency: String,
+    val cloggedPoreTendency: String,
+    val acneTendency: String,
+    val rednessTendency: String,
+    val hyperpigmentationLevel: String,
+    val textureConcernLevel: String,
+    val dehydrationLevel: String,
+    val barrierDamageLevel: String,
+    val goals: List<SkinGoalDto>,
+    val knownTriggers: List<KnownTriggerDto> = emptyList(),
+)
+
 data class ProductSearchEnvelopeDto(
     val products: List<ProductSummaryDto> = emptyList(),
     val pagination: PaginationDto? = null,
