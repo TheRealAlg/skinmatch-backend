@@ -57,6 +57,22 @@ Concept intent:
 Important caveat:
 - This is a directional concept only. It includes illustrative product/brand examples and should not be shipped as production UI or production imagery.
 
+## UX Designer Reference
+
+The UX designer dashboard/search/detail mockups are now captured as the
+post-welcome product reference:
+
+- [UX design reference and real data plan](UX_DESIGN_REFERENCE_AND_DATA_PLAN.md)
+- `assets/ux-designer-reference-dashboard-search-detail.png`
+
+Key impact:
+- Home should become a personalized dashboard.
+- Search should become a high-trust product browser.
+- Detail should open with product recognition, data confidence, ingredient
+  meaning, and next actions.
+- Numeric `Cilt uyumu` score rings are a future UI pattern, not a launch-ready
+  claim until the scoring model and data confidence thresholds are approved.
+
 Generation provenance:
 - Mode: built-in image generation tool.
 - Prompt summary: high-fidelity mobile UX concept board with three Android screens for SkinMatch: personalized home dashboard, graphical product search results, and product detail with fit summary, ingredient groups, caution notes, verification, and data confidence. Visual style requested: modern Material 3 inspired, premium skincare, evidence-based, warm off-white / terracotta / sage / amber palette, no diagnosis claims, no before/after imagery, no marketing landing page.
