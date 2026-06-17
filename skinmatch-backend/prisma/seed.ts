@@ -531,6 +531,8 @@ export async function seedDatabase(client: PrismaClient = prisma) {
           url: `https://example.com/skinmatch-seed/${product.imageSlug}.jpg`,
           altText: `${product.localProductName} seed image`,
           source: "mvp_seed_placeholder",
+          sourceUrl: `https://example.com/skinmatch-seed/${product.imageSlug}.jpg`,
+          usageRightsNote: "Development placeholder URL only; not approved production product imagery.",
           sortOrder: 0,
           isPrimary: true
         }

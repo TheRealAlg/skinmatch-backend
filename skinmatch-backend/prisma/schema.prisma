@@ -279,6 +279,8 @@ model ProductMarketImage {
   url             String
   altText         String?  @map("alt_text")
   source          String?
+  sourceUrl       String?  @map("source_url")
+  usageRightsNote String?  @map("usage_rights_note")
   sortOrder       Int      @default(0) @map("sort_order")
   isPrimary       Boolean  @default(false) @map("is_primary")
   createdAt       DateTime @default(now()) @map("created_at")

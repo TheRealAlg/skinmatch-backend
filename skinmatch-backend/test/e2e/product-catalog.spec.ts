@@ -1,4 +1,6 @@
 import "reflect-metadata";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import helmet from "helmet";
 import { INestApplication, ValidationPipe } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
@@ -7,6 +9,8 @@ import { PrismaService } from "../../src/common/database/prisma.service";
 import { HttpErrorFilter } from "../../src/common/errors/http-error.filter";
 import { ResponseEnvelopeInterceptor } from "../../src/common/interceptors/response-envelope.interceptor";
 import { seedDatabase } from "../../prisma/seed";
+import { parseReviewedProductsPayload } from "../../scripts/catalog/catalog-shared";
+import { importReviewedCatalogProducts } from "../../scripts/catalog/import-reviewed";
 
 type Envelope<T> = {
   data: T | null;
@@ -27,6 +31,12 @@ type SearchResponse = {
     brand: { name: string };
     verification: { status: string };
     dataConfidence: string;
+    image: {
+      url: string;
+      source: string | null;
+      sourceUrl: string | null;
+      usageRightsNote: string | null;
+    } | null;
   }>;
   pagination: { page: number; limit: number; total: number; totalPages: number };
   search: { marketCode: string; engine: string };
@@ -41,6 +51,18 @@ type ProductDetailResponse = {
     marketProduct: { marketCode: string; barcodeGtin: string };
     verification: { status: string; method: string; source: string; checkedAt: string };
     dataConfidence: string;
+    image: {
+      url: string;
+      source: string | null;
+      sourceUrl: string | null;
+      usageRightsNote: string | null;
+    } | null;
+    images: Array<{
+      url: string;
+      source: string | null;
+      sourceUrl: string | null;
+      usageRightsNote: string | null;
+    }>;
     rawIngredientText: string;
     ingredients: Array<{
       inciName: string;
@@ -69,7 +91,9 @@ describe("Product catalog read API (e2e)", () => {
   let app: INestApplication;
   let baseUrl: string;
   let productId: string;
+  let importedProductId: string;
   const niacinamideGtin = "8682773090119";
+  const importedGtin = "8690000000012";
 
   beforeAll(async () => {
     process.env.NODE_ENV = "test";
@@ -101,6 +125,12 @@ describe("Product catalog read API (e2e)", () => {
 
     const prisma = app.get(PrismaService);
     await seedDatabase(prisma);
+    const reviewedFixture = parseReviewedProductsPayload(
+      JSON.parse(
+        readFileSync(join(__dirname, "../fixtures/catalog-reviewed-product.valid.json"), "utf8")
+      )
+    );
+    await importReviewedCatalogProducts(reviewedFixture, prisma);
   });
 
   afterAll(async () => {
@@ -265,6 +295,65 @@ describe("Product catalog read API (e2e)", () => {
     );
     expect(JSON.stringify(response.body.data?.product.recommendationExplanation)).not.toMatch(
       /\b(cure|treats|diagnoses|toxicity|chemical-free)\b/i
+    );
+  });
+
+  it("serves reviewed catalog imports through search, barcode, detail, and image provenance", async () => {
+    const searchResponse = await requestJson<SearchResponse>(
+      "/products/search?q=Barrier%20Review&limit=10"
+    );
+
+    expect(searchResponse.status).toBe(200);
+    expect(searchResponse.body.data?.products).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          localProductName: "Barrier Review Serum",
+          barcodeGtin: importedGtin,
+          brand: expect.objectContaining({ name: "SkinMatch Review Lab" }),
+          verification: expect.objectContaining({ status: "label_reviewed" }),
+          dataConfidence: "medium",
+          image: expect.objectContaining({
+            source: "brand_feed_fixture",
+            sourceUrl: "https://example.org/skinmatch-fixture/barrier-review-serum",
+            usageRightsNote: "Test fixture only; not production imagery."
+          })
+        })
+      ])
+    );
+    importedProductId =
+      searchResponse.body.data?.products.find((product) => product.barcodeGtin === importedGtin)
+        ?.id ?? "";
+
+    const barcodeResponse = await requestJson<BarcodeLookupResponse>(
+      `/products/barcode/${importedGtin}`
+    );
+    expect(barcodeResponse.status).toBe(200);
+    expect(barcodeResponse.body.data).toEqual(
+      expect.objectContaining({
+        lookupStatus: "found",
+        product: expect.objectContaining({ id: importedProductId, barcodeGtin: importedGtin })
+      })
+    );
+
+    const detailResponse = await requestJson<ProductDetailResponse>(
+      `/products/${importedProductId}`
+    );
+    expect(detailResponse.status).toBe(200);
+    expect(detailResponse.body.data?.product).toEqual(
+      expect.objectContaining({
+        id: importedProductId,
+        rawIngredientText: "Aqua, Glycerin, Panthenol",
+        image: expect.objectContaining({
+          source: "brand_feed_fixture",
+          sourceUrl: "https://example.org/skinmatch-fixture/barrier-review-serum"
+        }),
+        images: expect.arrayContaining([
+          expect.objectContaining({
+            usageRightsNote: "Test fixture only; not production imagery."
+          })
+        ]),
+        recommendationExplanation: expect.objectContaining({ status: "not_scored" })
+      })
     );
   });
 

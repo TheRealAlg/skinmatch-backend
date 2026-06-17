@@ -16,7 +16,10 @@
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "catalog:fetch:open-beauty-facts": "ts-node scripts/catalog/fetch-open-beauty-facts.ts",
+    "catalog:import:reviewed": "ts-node scripts/catalog/import-reviewed.ts",
+    "catalog:import:dry-run": "ts-node scripts/catalog/import-reviewed.ts --dry-run"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",

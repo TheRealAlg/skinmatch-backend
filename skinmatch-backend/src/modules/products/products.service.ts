@@ -138,7 +138,9 @@ export class ProductsService {
         ? {
             url: primaryImage.url,
             altText: primaryImage.altText,
-            source: primaryImage.source
+            source: primaryImage.source,
+            sourceUrl: primaryImage.sourceUrl,
+            usageRightsNote: primaryImage.usageRightsNote
           }
         : null
     };
@@ -166,6 +168,8 @@ export class ProductsService {
         url: image.url,
         altText: image.altText,
         source: image.source,
+        sourceUrl: image.sourceUrl,
+        usageRightsNote: image.usageRightsNote,
         sortOrder: image.sortOrder,
         isPrimary: image.isPrimary
       })),

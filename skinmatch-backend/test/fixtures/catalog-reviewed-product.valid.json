@@ -1,0 +1,25 @@
+[
+  {
+    "approvedForImport": true,
+    "marketCode": "TR",
+    "locale": "tr-TR",
+    "currencyCode": "TRY",
+    "brandName": "SkinMatch Review Lab",
+    "globalCanonicalName": "Barrier Review Serum",
+    "localProductName": "Barrier Review Serum",
+    "category": "serum",
+    "barcodeGtin": "8690000000012",
+    "rawIngredientText": "Aqua, Glycerin, Panthenol",
+    "sourceName": "brand_feed_fixture",
+    "sourceUrl": "https://example.org/skinmatch-fixture/barrier-review-serum",
+    "verificationStatus": "label_reviewed",
+    "verificationMethod": "manual_fixture_review",
+    "dataConfidence": "medium",
+    "reviewer": "catalog-import-e2e",
+    "reviewNotes": "Reviewed test fixture for catalog import behavior.",
+    "imageUrl": "https://example.org/skinmatch-fixture/barrier-review-serum.png",
+    "imageAltText": "Barrier Review Serum product image",
+    "imageSourceUrl": "https://example.org/skinmatch-fixture/barrier-review-serum",
+    "imageUsageRightsNote": "Test fixture only; not production imagery."
+  }
+]
