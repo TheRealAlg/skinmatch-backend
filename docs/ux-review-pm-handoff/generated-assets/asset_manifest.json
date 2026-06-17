@@ -1,0 +1,106 @@
+{
+  "generated_at": "2026-06-14",
+  "generation_mode": "built-in image generation tool",
+  "source_principle": "Generated graphics are for unbranded fallbacks, empty states, and visual references. Product truth must come from real catalog data and real product imagery.",
+  "android_resource_directory": "android-app/app/src/main/res/drawable-nodpi",
+  "assets": [
+    {
+      "id": "product_fallback_serum",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/product_fallback_serum.png",
+      "android_resource": "R.drawable.skinmatch_product_fallback_serum",
+      "usage": "Fallback thumbnail when a serum product has no usable imageUrl.",
+      "safe_for_production": true
+    },
+    {
+      "id": "product_fallback_cleanser",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/product_fallback_cleanser.png",
+      "android_resource": "R.drawable.skinmatch_product_fallback_cleanser",
+      "usage": "Fallback thumbnail when a cleanser, wash, or gel product has no usable imageUrl.",
+      "safe_for_production": true
+    },
+    {
+      "id": "product_fallback_sunscreen",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/product_fallback_sunscreen.png",
+      "android_resource": "R.drawable.skinmatch_product_fallback_sunscreen",
+      "usage": "Fallback thumbnail when a sunscreen or sun-care product has no usable imageUrl.",
+      "safe_for_production": true
+    },
+    {
+      "id": "product_fallback_moisturizer",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/product_fallback_moisturizer.png",
+      "android_resource": "R.drawable.skinmatch_product_fallback_moisturizer",
+      "usage": "Fallback thumbnail when a moisturizer, cream, or lotion product has no usable imageUrl.",
+      "safe_for_production": true
+    },
+    {
+      "id": "product_fallback_toner",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/product_fallback_toner.png",
+      "android_resource": "R.drawable.skinmatch_product_fallback_toner",
+      "usage": "Fallback thumbnail when a toner product has no usable imageUrl.",
+      "safe_for_production": true
+    },
+    {
+      "id": "product_fallback_mask",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/product_fallback_mask.png",
+      "android_resource": "R.drawable.skinmatch_product_fallback_mask",
+      "usage": "Fallback thumbnail when a mask product has no usable imageUrl.",
+      "safe_for_production": true
+    },
+    {
+      "id": "product_fallback_unknown",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/product_fallback_unknown.png",
+      "android_resource": "R.drawable.skinmatch_product_fallback_unknown",
+      "usage": "Fallback thumbnail when the product category is unknown or unmapped.",
+      "safe_for_production": true
+    },
+    {
+      "id": "empty_no_search_results",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/empty_no_search_results.png",
+      "android_resource": "R.drawable.skinmatch_empty_no_search_results",
+      "usage": "Illustration for searches with no matching catalog results.",
+      "safe_for_production": true
+    },
+    {
+      "id": "empty_low_data_confidence",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/empty_low_data_confidence.png",
+      "android_resource": "R.drawable.skinmatch_empty_low_data_confidence",
+      "usage": "Illustration for low or unknown product data confidence states.",
+      "safe_for_production": true
+    },
+    {
+      "id": "empty_consent_required",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/empty_consent_required.png",
+      "android_resource": "R.drawable.skinmatch_empty_consent_required",
+      "usage": "Illustration for privacy or profile-processing consent gates.",
+      "safe_for_production": true
+    },
+    {
+      "id": "empty_profile_incomplete",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/empty_profile_incomplete.png",
+      "android_resource": "R.drawable.skinmatch_empty_profile_incomplete",
+      "usage": "Illustration for missing or incomplete skin profile states.",
+      "safe_for_production": true
+    },
+    {
+      "id": "empty_no_saved_products",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/empty_no_saved_products.png",
+      "android_resource": "R.drawable.skinmatch_empty_no_saved_products",
+      "usage": "Illustration for saved-products or favorites empty state.",
+      "safe_for_production": true
+    },
+    {
+      "id": "skin_profile_avatar_reference",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/skin_profile_avatar_reference.png",
+      "android_resource": "R.drawable.skinmatch_skin_profile_avatar_reference",
+      "usage": "Design reference only. Runtime profile visualization should use the SkinProfileAvatar Compose component.",
+      "safe_for_production": false
+    },
+    {
+      "id": "asset_contact_sheet",
+      "source_file": "docs/ux-review-pm-handoff/generated-assets/asset_contact_sheet.png",
+      "android_resource": null,
+      "usage": "Review sheet for generated assets.",
+      "safe_for_production": false
+    }
+  ]
+}
