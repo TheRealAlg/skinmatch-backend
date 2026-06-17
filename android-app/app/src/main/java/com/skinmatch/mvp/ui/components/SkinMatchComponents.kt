@@ -2,6 +2,7 @@ package com.skinmatch.mvp.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -63,11 +64,15 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.skinmatch.mvp.domain.models.DataConfidence
 import com.skinmatch.mvp.domain.models.VerificationStatus
+import com.skinmatch.mvp.ui.assets.SkinMatchEmptyIllustration
+import com.skinmatch.mvp.ui.assets.emptyIllustrationDrawable
 import com.skinmatch.mvp.ui.theme.Amber
 import com.skinmatch.mvp.ui.theme.AmberLight
 import com.skinmatch.mvp.ui.theme.Cream
@@ -304,10 +309,30 @@ fun StateCard(
     body: String,
     modifier: Modifier = Modifier,
     icon: ImageVector = Icons.Rounded.Info,
+    illustrationRes: Int? = null,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
     SectionCard(modifier = modifier) {
+        if (illustrationRes != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(136.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CreamDeep.copy(alpha = 0.45f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(illustrationRes),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(10.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+        }
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.Top,
@@ -351,12 +376,17 @@ fun LoadingState(title: String = "Yükleniyor") {
 }
 
 @Composable
-fun EmptyState(body: String, modifier: Modifier = Modifier) {
+fun EmptyState(
+    body: String,
+    modifier: Modifier = Modifier,
+    illustrationType: SkinMatchEmptyIllustration = SkinMatchEmptyIllustration.NoSearchResults,
+) {
     StateCard(
         title = "Henüz veri yok",
         body = body,
         modifier = modifier,
         icon = Icons.Rounded.Search,
+        illustrationRes = emptyIllustrationDrawable(illustrationType),
     )
 }
 
@@ -378,6 +408,7 @@ fun ConsentBlockedState(onOpenConsent: () -> Unit) {
         title = "Onay gerekli",
         body = "Cilt profili, tetikleyiciler ve hassasiyet bilgileri hassas veri kabul edilir. Kaydetmeden önce aktif KVKK ve profil işleme onayı gerekir.",
         icon = Icons.Rounded.Lock,
+        illustrationRes = emptyIllustrationDrawable(SkinMatchEmptyIllustration.ConsentRequired),
         actionLabel = "Onay ekranına git",
         onAction = onOpenConsent,
     )
@@ -389,6 +420,7 @@ fun LowConfidenceState(note: String) {
         title = "Veri güveni düşük",
         body = note,
         icon = Icons.Rounded.CloudOff,
+        illustrationRes = emptyIllustrationDrawable(SkinMatchEmptyIllustration.LowDataConfidence),
     )
 }
 

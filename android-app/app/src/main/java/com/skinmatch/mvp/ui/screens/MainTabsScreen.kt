@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -26,12 +27,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.skinmatch.mvp.di.AppContainer
+import com.skinmatch.mvp.domain.models.SkinProfile
+import com.skinmatch.mvp.ui.assets.SkinMatchEmptyIllustration
 import com.skinmatch.mvp.ui.components.ConsentBlockedState
 import com.skinmatch.mvp.ui.components.EmptyState
 import com.skinmatch.mvp.ui.components.InlineStatusRow
 import com.skinmatch.mvp.ui.components.PremiumBackground
 import com.skinmatch.mvp.ui.components.PrimaryActionButton
 import com.skinmatch.mvp.ui.components.SectionCard
+import com.skinmatch.mvp.ui.components.SkinProfileAvatar
 import com.skinmatch.mvp.ui.skinMatchViewModelFactory
 import com.skinmatch.mvp.ui.theme.Cream
 import com.skinmatch.mvp.ui.theme.Ink
@@ -96,7 +100,7 @@ fun MainTabsScreen(
             ) {
                 when (selectedTab) {
                     MainTab.Home -> HomeTab(
-                        hasProfile = profileSummary.profile != null,
+                        profile = profileSummary.profile,
                         onStartProfile = onOpenConsent,
                         onSearch = { onTabSelected(MainTab.Search) },
                     )
@@ -143,7 +147,7 @@ fun MainTabsScreen(
 
 @Composable
 private fun HomeTab(
-    hasProfile: Boolean,
+    profile: SkinProfile?,
     onStartProfile: () -> Unit,
     onSearch: () -> Unit,
 ) {
@@ -170,11 +174,19 @@ private fun HomeTab(
             PrimaryActionButton(text = "Ürün ara", onClick = onSearch)
         }
 
-        if (!hasProfile) {
-            EmptyState("Profil henüz yok. Profil oluşturunca ürün ayrıntılarındaki uyumluluk notları daha anlamlı hale gelir.")
+        if (profile == null) {
+            EmptyState(
+                "Profil henüz yok. Profil oluşturunca ürün ayrıntılarındaki uyumluluk notları daha anlamlı hale gelir.",
+                illustrationType = SkinMatchEmptyIllustration.ProfileIncomplete,
+            )
             PrimaryActionButton(text = "Cilt profilimi oluştur", onClick = onStartProfile)
         } else {
             SectionCard {
+                SkinProfileAvatar(
+                    profile = profile,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentDescription = "Cilt profili gorsel ozeti",
+                )
                 InlineStatusRow(
                     icon = Icons.Rounded.Spa,
                     title = "Profil hazır",
@@ -207,7 +219,10 @@ private fun MemoryTab(
 
         when {
             consentBlocked -> ConsentBlockedState(onOpenConsent)
-            !hasProfile -> EmptyState("Cilt hafızasını başlatmak için önce profil oluşturmanız gerekir.")
+            !hasProfile -> EmptyState(
+                "Cilt hafızasını başlatmak için önce profil oluşturmanız gerekir.",
+                illustrationType = SkinMatchEmptyIllustration.ProfileIncomplete,
+            )
             else -> SectionCard {
                 InlineStatusRow(
                     icon = Icons.Rounded.Spa,

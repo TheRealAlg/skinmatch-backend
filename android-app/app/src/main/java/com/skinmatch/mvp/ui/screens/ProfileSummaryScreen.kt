@@ -1,6 +1,7 @@
 package com.skinmatch.mvp.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FaceRetouchingNatural
 import androidx.compose.material.icons.rounded.Flag
@@ -9,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -33,6 +35,8 @@ import com.skinmatch.mvp.ui.components.ScreenColumn
 import com.skinmatch.mvp.ui.components.SecondaryActionButton
 import com.skinmatch.mvp.ui.components.SelectablePill
 import com.skinmatch.mvp.ui.components.SectionCard
+import com.skinmatch.mvp.ui.components.SkinProfileAvatar
+import com.skinmatch.mvp.ui.assets.SkinMatchEmptyIllustration
 import com.skinmatch.mvp.ui.theme.Ink
 import com.skinmatch.mvp.ui.theme.MutedInk
 import com.skinmatch.mvp.ui.theme.Terracotta
@@ -121,8 +125,24 @@ fun ProfileSummaryContent(
 ) {
     when (uiState.status) {
         UiStatus.CONSENT_BLOCKED -> ConsentBlockedState(onOpenConsent)
-        UiStatus.EMPTY -> EmptyState("Cilt profiliniz henüz yok. Profil oluşturunca ürün verileri daha anlamlı okunur.")
+        UiStatus.EMPTY -> EmptyState(
+            "Cilt profiliniz henüz yok. Profil oluşturunca ürün verileri daha anlamlı okunur.",
+            illustrationType = SkinMatchEmptyIllustration.ProfileIncomplete,
+        )
         UiStatus.READY -> uiState.profile?.let { profile ->
+            SectionCard {
+                SkinProfileAvatar(
+                    profile = profile,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentDescription = "Cilt profili gorsel ozeti",
+                )
+                InlineStatusRow(
+                    icon = Icons.Rounded.FaceRetouchingNatural,
+                    title = "Cilt profilin",
+                    body = "Görsel özet yalnızca seçtiğiniz profil alanlarını yansıtır; kamera analizi veya tanı değildir.",
+                )
+            }
+
             SummarySection(
                 icon = Icons.Rounded.FaceRetouchingNatural,
                 title = "Cilt davranışı",
