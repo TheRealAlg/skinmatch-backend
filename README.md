@@ -51,6 +51,21 @@ Do not enable mock auth in production.
 If Docker is not available, run PostgreSQL locally and keep the development
 database UTF-8 encoded so Turkey seed data stores correctly.
 
+On Windows, if PostgreSQL is installed but Docker is not available, the backend
+has a helper that creates a dedicated local dev cluster under AppData and starts
+it on port `55432`:
+
+```powershell
+cd skinmatch-backend
+.\scripts\start-local-postgres.ps1
+```
+
+Then set this in `skinmatch-backend/.env`:
+
+```bash
+DATABASE_URL=postgresql://skincare:skincare@127.0.0.1:55432/skincare_dev?schema=public
+```
+
 Create the local role and database:
 
 ```bash

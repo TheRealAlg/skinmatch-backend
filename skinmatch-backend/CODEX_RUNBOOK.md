@@ -16,7 +16,7 @@ auth/session
 ## Setup Commands
 
 ```bash
-cd backend
+cd skinmatch-backend
 npm install
 cp .env.example .env
 docker compose up -d
@@ -26,6 +26,18 @@ npm run prisma:seed
 npm run build
 npm test
 ```
+
+If Docker is not available on Windows but PostgreSQL is installed, start the
+repo-local dev database port first:
+
+```powershell
+cd skinmatch-backend
+.\scripts\start-local-postgres.ps1
+```
+
+Use the printed `DATABASE_URL` in `skinmatch-backend/.env`, then run the Prisma
+commands above. This avoids depending on an unknown local `postgres` superuser
+or a stale `.env` port.
 
 If `npm install` fails, capture the full error and do not rewrite the stack. The intended MVP stack is NestJS + TypeScript + Prisma + PostgreSQL.
 
