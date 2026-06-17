@@ -26,15 +26,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.skinmatch.mvp.data.repository.ProductRepository
-import com.skinmatch.mvp.domain.models.DataConfidence
 import com.skinmatch.mvp.domain.models.ProductSearchResult
 import com.skinmatch.mvp.domain.models.UiStatus
 import com.skinmatch.mvp.ui.components.ConfidencePill
 import com.skinmatch.mvp.ui.components.EmptyState
 import com.skinmatch.mvp.ui.components.ErrorState
 import com.skinmatch.mvp.ui.components.LoadingState
-import com.skinmatch.mvp.ui.components.LowConfidenceState
-import com.skinmatch.mvp.ui.components.ProductBottle
+import com.skinmatch.mvp.ui.components.ProductVisual
 import com.skinmatch.mvp.ui.components.SectionCard
 import com.skinmatch.mvp.ui.components.StateCard
 import com.skinmatch.mvp.ui.components.VerificationPill
@@ -163,13 +161,15 @@ private fun ProductResultCard(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ProductBottle(
-                brand = product.brand,
-                modifier = Modifier.size(width = 86.dp, height = 118.dp),
+            ProductVisual(
+                imageUrl = product.imageUrl,
+                category = product.category,
+                productName = product.name,
+                modifier = Modifier.size(width = 88.dp, height = 122.dp),
             )
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(7.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(product.brand, style = MaterialTheme.typography.labelLarge, color = MutedInk)
                 Text(
@@ -185,20 +185,12 @@ private fun ProductResultCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MutedInk,
                 )
-                VerificationPill(product.verificationStatus)
-                ConfidencePill(product.dataConfidence)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    VerificationPill(product.verificationStatus)
+                    ConfidencePill(product.dataConfidence)
+                }
             }
         }
-        if (product.verificationSource.isNotBlank()) {
-            Text(
-                "Kaynak: ${product.verificationSource}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MutedInk,
-            )
-        }
         Text(product.note, style = MaterialTheme.typography.bodyMedium, color = MutedInk)
-        if (product.dataConfidence == DataConfidence.LOW || product.dataConfidence == DataConfidence.UNKNOWN) {
-            LowConfidenceState("Bu ürün kartı sınırlı güvenle gösteriliyor. not_scored: güçlü uygunluk yorumu yapılmaz.")
-        }
     }
 }

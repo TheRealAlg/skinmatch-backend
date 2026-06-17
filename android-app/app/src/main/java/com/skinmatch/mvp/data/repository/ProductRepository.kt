@@ -191,9 +191,9 @@ private fun buildCatalogNote(
 
     return when {
         status == "not_scored" && limitedData ->
-            "not_scored: Katalog verisi sınırlı; güçlü uygunluk yorumu yapılmaz."
+            "Veri sınırlı: Bu ürün için güçlü uygunluk yorumu yapılmaz."
         status == "not_scored" ->
-            "not_scored: Bu katalog yanıtı yalnızca içerik ve doğrulama bağlamı sağlar."
+            "Uyumluluk skoru henüz hesaplanmadı; içerik ve doğrulama bilgisi gösteriliyor."
         verificationStatus == VerificationStatus.UNKNOWN ->
             "Doğrulama durumu bilinmiyor; veriyi sınırlı kabul edin."
         else ->

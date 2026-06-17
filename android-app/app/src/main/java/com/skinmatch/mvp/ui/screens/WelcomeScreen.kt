@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FaceRetouchingNatural
 import androidx.compose.material3.Icon
@@ -82,10 +81,9 @@ private fun WelcomeHeroArtwork() {
         contentDescription = "Cilt bakımı ürünleri ve krem dokusu",
         modifier = Modifier
             .fillMaxWidth()
-            .height(310.dp)
-            .clip(RoundedCornerShape(8.dp)),
-        contentScale = ContentScale.Crop,
-        alignment = Alignment.Center,
+            .height(300.dp),
+        contentScale = ContentScale.Fit,
+        alignment = Alignment.BottomCenter,
     )
 }
 

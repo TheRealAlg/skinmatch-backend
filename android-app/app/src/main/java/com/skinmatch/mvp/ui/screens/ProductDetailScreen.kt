@@ -34,14 +34,13 @@ import com.skinmatch.mvp.domain.models.IngredientItem
 import com.skinmatch.mvp.domain.models.ProductDetail
 import com.skinmatch.mvp.domain.models.RecommendationExplanation
 import com.skinmatch.mvp.domain.models.UiStatus
-import com.skinmatch.mvp.domain.models.VerificationStatus
 import com.skinmatch.mvp.ui.components.ConfidencePill
 import com.skinmatch.mvp.ui.components.ErrorState
 import com.skinmatch.mvp.ui.components.IngredientIcon
 import com.skinmatch.mvp.ui.components.InlineStatusRow
 import com.skinmatch.mvp.ui.components.LoadingState
 import com.skinmatch.mvp.ui.components.LowConfidenceState
-import com.skinmatch.mvp.ui.components.ProductBottle
+import com.skinmatch.mvp.ui.components.ProductVisual
 import com.skinmatch.mvp.ui.components.PremiumBackground
 import com.skinmatch.mvp.ui.components.ScreenColumn
 import com.skinmatch.mvp.ui.components.SectionCard
@@ -126,6 +125,7 @@ fun ProductDetailScreen(
 @Composable
 private fun ProductDetailContent(product: ProductDetail) {
     ProductHeader(product)
+    ProductDecisionSummary(product)
 
     if (
         product.dataConfidence == DataConfidence.LOW ||
@@ -143,11 +143,6 @@ private fun ProductDetailContent(product: ProductDetail) {
         )
         VerificationPill(product.verificationStatus)
         ConfidencePill(product.dataConfidence)
-        Text(
-            "Durum kodu: ${product.verificationStatus.backendCode()} • Veri güveni kodu: ${product.dataConfidence.backendCode()}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MutedInk,
-        )
     }
 
     RecommendationSection(product.recommendationExplanation)
@@ -177,8 +172,10 @@ private fun ProductHeader(product: ProductDetail) {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ProductBottle(
-                brand = product.brand,
+            ProductVisual(
+                imageUrl = product.imageUrl,
+                category = product.category,
+                productName = product.marketProductName,
                 modifier = Modifier.size(width = 130.dp, height = 174.dp),
             )
             Column(
@@ -188,7 +185,7 @@ private fun ProductHeader(product: ProductDetail) {
                 Text(product.brand, style = MaterialTheme.typography.labelLarge, color = Terracotta)
                 Text(
                     product.marketProductName,
-                    style = MaterialTheme.typography.displayMedium,
+                    style = MaterialTheme.typography.headlineMedium,
                     color = Ink,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
@@ -206,12 +203,39 @@ private fun ProductHeader(product: ProductDetail) {
 }
 
 @Composable
+private fun ProductDecisionSummary(product: ProductDetail) {
+    SectionCard {
+        InlineStatusRow(
+            icon = Icons.Rounded.Info,
+            title = "Ürün karar özeti",
+            body = product.confidenceNote,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            VerificationPill(product.verificationStatus)
+            ConfidencePill(product.dataConfidence)
+        }
+        Text(
+            recommendationStatusText(product.recommendationExplanation),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MutedInk,
+        )
+        if (product.normalizedIngredients.isNotEmpty()) {
+            Text("Öne çıkan içerikler", style = MaterialTheme.typography.titleMedium, color = Ink)
+            product.normalizedIngredients.take(3).forEach { ingredient ->
+                val function = ingredient.functions.firstOrNull()?.label ?: "İçerik eşleştirmesi"
+                DetailLine("${ingredient.displayName}: $function")
+            }
+        }
+    }
+}
+
+@Composable
 private fun RecommendationSection(explanation: RecommendationExplanation) {
     SectionCard {
         InlineStatusRow(
             icon = Icons.Rounded.Info,
             title = "Öneri açıklaması",
-            body = "Durum: ${explanation.status} • Güven: ${explanation.confidence.backendCode()}",
+            body = recommendationStatusText(explanation),
         )
         if (explanation.notes.isNotEmpty()) {
             Text("Notlar", style = MaterialTheme.typography.titleMedium, color = Ink)
@@ -223,7 +247,7 @@ private fun RecommendationSection(explanation: RecommendationExplanation) {
         }
         if (explanation.status == "not_scored") {
             Text(
-                "not_scored: Bu ekran yalnızca katalog bağlamı gösterir; öneri hesabı yapılmaz.",
+                "Uyumluluk skoru henüz hesaplanmadı; bu ekran yalnızca katalog bağlamı gösterir.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MutedInk,
             )
@@ -253,7 +277,7 @@ private fun IngredientRow(ingredient: IngredientItem) {
             }
             ConfidencePill(ingredient.mappingConfidence)
             Text(
-                "Eşleştirme güveni: ${ingredient.mappingConfidence.backendCode()}",
+                "Eşleştirme güveni: ${ingredient.mappingConfidence.label}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MutedInk,
             )
@@ -279,13 +303,13 @@ private fun IngredientRow(ingredient: IngredientItem) {
 @Composable
 private fun FunctionLine(function: IngredientFunction) {
     val note = function.note?.takeIf { it.isNotBlank() }?.let { " - $it" }.orEmpty()
-    DetailLine("${function.label} (${function.key})$note")
+    DetailLine("${function.label}$note")
 }
 
 @Composable
 private fun FlagLine(flag: IngredientFlag) {
     val note = flag.note?.takeIf { it.isNotBlank() }?.let { " - $it" }.orEmpty()
-    DetailLine("${flag.label} (${flag.key}, ${flag.confidence.backendCode()})$note")
+    DetailLine("${flag.label} - Güven: ${flag.confidence.label}$note")
 }
 
 @Composable
@@ -300,18 +324,11 @@ private fun verificationBody(product: ProductDetail): String {
     return "Yöntem: $method\nKaynak: $source\nKontrol tarihi: $checkedAt"
 }
 
-private fun DataConfidence.backendCode(): String = when (this) {
-    DataConfidence.HIGH -> "high"
-    DataConfidence.MEDIUM -> "medium"
-    DataConfidence.LOW -> "low"
-    DataConfidence.UNKNOWN -> "unknown"
-}
-
-private fun VerificationStatus.backendCode(): String = when (this) {
-    VerificationStatus.UNVERIFIED -> "unverified"
-    VerificationStatus.USER_SUBMITTED -> "user_submitted"
-    VerificationStatus.RETAILER_SOURCED -> "retailer_sourced"
-    VerificationStatus.LABEL_REVIEWED -> "label_reviewed"
-    VerificationStatus.UTS_CHECKED -> "uts_checked"
-    VerificationStatus.UNKNOWN -> "unknown"
+private fun recommendationStatusText(explanation: RecommendationExplanation): String {
+    val confidence = explanation.confidence.label
+    return when (explanation.status) {
+        "not_scored" -> "Uyumluluk skoru henüz hesaplanmadı. Veri güveni: $confidence."
+        "scored" -> "Uyumluluk değerlendirmesi hazır. Veri güveni: $confidence."
+        else -> "Ürün bilgisi içerik ve doğrulama bağlamıyla gösteriliyor. Veri güveni: $confidence."
+    }
 }
