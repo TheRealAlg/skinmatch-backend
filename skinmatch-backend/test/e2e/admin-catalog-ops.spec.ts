@@ -132,7 +132,11 @@ describe("Admin catalog ops API (e2e)", () => {
     const panelResponse = await fetch(`${baseUrl}/api/v1/admin/catalog/panel`);
     expect(panelResponse.status).toBe(200);
     expect(panelResponse.headers.get("content-type")).toContain("text/html");
-    expect(await panelResponse.text()).toContain("SkinMatch Catalog Ops");
+    expect(panelResponse.headers.get("content-security-policy")).toContain("script-src");
+    const panelHtml = await panelResponse.text();
+    expect(panelHtml).toContain("SkinMatch Catalog Ops");
+    expect(panelHtml).toContain("Fetch + queue candidates");
+    expect(panelHtml).toContain("Ingest candidates");
   });
 
   it("queues reviewed candidates, surfaces issues, approves, imports, and preserves Turkish curation", async () => {

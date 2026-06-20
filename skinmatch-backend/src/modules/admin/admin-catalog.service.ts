@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import * as path from "node:path";
 import { CatalogCandidateStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../../common/database/prisma.service";
 import {
@@ -10,7 +11,9 @@ import {
   validateReviewedProduct
 } from "../../../scripts/catalog/catalog-shared";
 import { importReviewedCatalogProducts } from "../../../scripts/catalog/import-reviewed";
+import { fetchOpenBeautyFactsCandidates as fetchOpenBeautyFactsCandidateFiles } from "../../../scripts/catalog/fetch-open-beauty-facts";
 import {
+  FetchOpenBeautyFactsCandidatesDto,
   CandidateProductDto,
   ListCandidatesQueryDto,
   ListIngredientsQueryDto,
@@ -40,6 +43,30 @@ export class AdminCatalogService {
     return {
       importedToQueue: saved.length,
       candidates: saved
+    };
+  }
+
+  async fetchOpenBeautyFactsCandidates(dto: FetchOpenBeautyFactsCandidatesDto) {
+    const result = await fetchOpenBeautyFactsCandidateFiles({
+      queries:
+        dto.queries && dto.queries.length > 0
+          ? dto.queries
+          : ["serum", "cleanser", "moisturizer", "sunscreen", "toner", "mask"],
+      limit: dto.limit ?? 25,
+      outputDir: path.resolve(process.cwd(), "catalog-candidates")
+    });
+    const queueResult = await this.ingestReviewedProducts(
+      result.candidateFile.products as CandidateProductDto[]
+    );
+
+    return {
+      source: "open_beauty_facts",
+      productsFetched: result.products,
+      queued: queueResult.importedToQueue,
+      jsonPath: result.jsonPath,
+      csvPath: result.csvPath,
+      officialReferences: result.candidateFile.metadata.officialReferences,
+      candidates: queueResult.candidates
     };
   }
 
@@ -652,11 +679,24 @@ const adminPanelHtml = `<!doctype html>
     <input id="key" type="password" placeholder="X-SkinMatch-Admin-Key" value="skinmatch-local-admin" />
   </section>
   <section>
+    <h2>Fetch discovery candidates</h2>
+    <p>Fetches Open Beauty Facts candidates, writes review files under <code>catalog-candidates/</code>, and queues rows for review. Nothing is imported until approved.</p>
+    <div class="row">
+      <label>Queries<input id="fetchQueries" value="serum,cleanser,moisturizer,sunscreen,toner,mask" /></label>
+      <label>Limit per query<input id="fetchLimit" type="number" min="1" max="100" value="25" /></label>
+    </div>
+    <p><button onclick="fetchOpenBeautyFacts()">Fetch + queue candidates</button></p>
+  </section>
+  <section>
     <h2>Drag/drop reviewed JSON</h2>
     <p>Drop a reviewed JSON file or paste JSON with a <code>products</code> array. Rows with missing fields stay in review.</p>
     <textarea id="json" rows="10" placeholder='{"products":[...]}'></textarea>
     <p><input id="file" type="file" accept="application/json" /></p>
     <button onclick="ingest()">Ingest candidates</button>
+  </section>
+  <section>
+    <h2>Result</h2>
+    <pre id="result"></pre>
   </section>
   <section>
     <h2>Queue</h2>
@@ -666,20 +706,43 @@ const adminPanelHtml = `<!doctype html>
 </main>
 <script>
 const headers = () => ({ "content-type": "application/json", "x-skinmatch-admin-key": document.getElementById("key").value });
+function showResult(value) {
+  document.getElementById("result").textContent = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+async function requestJson(url, options) {
+  const response = await fetch(url, options);
+  const json = await response.json();
+  showResult(json);
+  if (!response.ok) throw new Error(json.error?.message || "Request failed");
+  return json;
+}
 document.getElementById("file").addEventListener("change", async (event) => {
   const file = event.target.files[0];
   if (file) document.getElementById("json").value = await file.text();
 });
+async function fetchOpenBeautyFacts() {
+  try {
+    showResult("Fetching candidates...");
+    const queries = document.getElementById("fetchQueries").value.split(",").map((item) => item.trim()).filter(Boolean);
+    const limit = Number(document.getElementById("fetchLimit").value || 25);
+    await requestJson("/api/v1/admin/catalog/candidates/fetch-open-beauty-facts", { method: "POST", headers: headers(), body: JSON.stringify({ queries, limit }) });
+    await loadCandidates();
+  } catch (error) {
+    showResult(error.message || String(error));
+  }
+}
 async function ingest() {
-  const raw = JSON.parse(document.getElementById("json").value);
-  const body = Array.isArray(raw) ? { products: raw } : raw;
-  const response = await fetch("/api/v1/admin/catalog/candidates/from-reviewed-products", { method: "POST", headers: headers(), body: JSON.stringify(body) });
-  alert(JSON.stringify(await response.json(), null, 2));
-  await loadCandidates();
+  try {
+    const raw = JSON.parse(document.getElementById("json").value);
+    const body = Array.isArray(raw) ? { products: raw } : raw;
+    await requestJson("/api/v1/admin/catalog/candidates/from-reviewed-products", { method: "POST", headers: headers(), body: JSON.stringify(body) });
+    await loadCandidates();
+  } catch (error) {
+    showResult(error.message || String(error));
+  }
 }
 async function loadCandidates() {
-  const response = await fetch("/api/v1/admin/catalog/candidates?limit=50", { headers: headers() });
-  const json = await response.json();
+  const json = await requestJson("/api/v1/admin/catalog/candidates?limit=50", { headers: headers() });
   const candidates = json.data?.candidates ?? [];
   document.getElementById("queue").innerHTML = "<table><thead><tr><th>Product</th><th>Status</th><th>Issues</th><th>Actions</th></tr></thead><tbody>" + candidates.map((candidate) => {
     const issues = candidate.issues.map((issue) => '<span class="issue">' + issue.issueKey + '</span>').join(" ");
@@ -687,16 +750,14 @@ async function loadCandidates() {
   }).join("") + "</tbody></table>";
 }
 async function approve(id) {
-  const response = await fetch("/api/v1/admin/catalog/candidates/" + id + "/review", { method: "PATCH", headers: headers(), body: JSON.stringify({ approvedForImport: true, reviewer: "admin-panel" }) });
-  alert(JSON.stringify(await response.json(), null, 2));
+  await requestJson("/api/v1/admin/catalog/candidates/" + id + "/review", { method: "PATCH", headers: headers(), body: JSON.stringify({ approvedForImport: true, reviewer: "admin-panel" }) });
   await loadCandidates();
 }
 async function importCandidate(id) {
-  const response = await fetch("/api/v1/admin/catalog/candidates/" + id + "/import", { method: "POST", headers: headers() });
-  alert(JSON.stringify(await response.json(), null, 2));
+  await requestJson("/api/v1/admin/catalog/candidates/" + id + "/import", { method: "POST", headers: headers() });
   await loadCandidates();
 }
-loadCandidates().catch(() => {});
+loadCandidates().catch((error) => showResult(error.message || String(error)));
 </script>
 </body>
 </html>`;

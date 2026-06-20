@@ -21,6 +21,8 @@ The backend also exposes a review queue for product operations:
 
 - Panel: `GET /api/v1/admin` or `GET /api/v1/admin/catalog/panel`
 - Queue reviewed JSON: `POST /api/v1/admin/catalog/candidates/from-reviewed-products`
+- Fetch Open Beauty Facts candidates into files and the review queue:
+  - `POST /api/v1/admin/catalog/candidates/fetch-open-beauty-facts`
 - List/review/import candidates:
   - `GET /api/v1/admin/catalog/candidates`
   - `PATCH /api/v1/admin/catalog/candidates/:id/review`

@@ -49,10 +49,17 @@ export type OpenBeautyFactsProduct = {
   url?: string;
 };
 
-type FetchOptions = {
+export type FetchOpenBeautyFactsOptions = {
   queries: string[];
   limit: number;
   outputDir: string;
+};
+
+export type FetchOpenBeautyFactsResult = {
+  products: number;
+  jsonPath: string;
+  csvPath: string;
+  candidateFile: CandidateFile;
 };
 
 export function normalizeOpenBeautyFactsProduct(
@@ -107,7 +114,9 @@ export function normalizeOpenBeautyFactsProduct(
   };
 }
 
-export async function fetchOpenBeautyFactsCandidates(options: FetchOptions) {
+export async function fetchOpenBeautyFactsCandidateFile(
+  options: Pick<FetchOpenBeautyFactsOptions, "queries" | "limit">
+): Promise<CandidateFile> {
   const candidates = new Map<string, ReviewedCatalogProduct>();
 
   for (const query of options.queries) {
@@ -132,12 +141,7 @@ export async function fetchOpenBeautyFactsCandidates(options: FetchOptions) {
     left.localProductName.localeCompare(right.localProductName, "tr-TR")
   );
 
-  await fs.mkdir(options.outputDir, { recursive: true });
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const jsonPath = path.join(options.outputDir, `open-beauty-facts-${timestamp}.json`);
-  const csvPath = path.join(options.outputDir, `open-beauty-facts-${timestamp}-review.csv`);
-
-  const candidateFile: CandidateFile = {
+  return {
     metadata: {
       generatedAt: new Date().toISOString(),
       source: "open_beauty_facts",
@@ -146,14 +150,26 @@ export async function fetchOpenBeautyFactsCandidates(options: FetchOptions) {
     },
     products
   };
+}
+
+export async function fetchOpenBeautyFactsCandidates(
+  options: FetchOpenBeautyFactsOptions
+): Promise<FetchOpenBeautyFactsResult> {
+  const candidateFile = await fetchOpenBeautyFactsCandidateFile(options);
+
+  await fs.mkdir(options.outputDir, { recursive: true });
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const jsonPath = path.join(options.outputDir, `open-beauty-facts-${timestamp}.json`);
+  const csvPath = path.join(options.outputDir, `open-beauty-facts-${timestamp}-review.csv`);
 
   await fs.writeFile(jsonPath, `${JSON.stringify(candidateFile, null, 2)}\n`, "utf8");
-  await fs.writeFile(csvPath, `${toReviewCsv(products)}\n`, "utf8");
+  await fs.writeFile(csvPath, `${toReviewCsv(candidateFile.products)}\n`, "utf8");
 
   return {
-    products: products.length,
+    products: candidateFile.products.length,
     jsonPath,
-    csvPath
+    csvPath,
+    candidateFile
   };
 }
 
@@ -164,7 +180,7 @@ async function main() {
   console.log("\nOfficial implementation references:\n" + officialReferenceText());
 }
 
-function parseArgs(args: string[]): FetchOptions {
+function parseArgs(args: string[]): FetchOpenBeautyFactsOptions {
   const values = new Map<string, string>();
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];

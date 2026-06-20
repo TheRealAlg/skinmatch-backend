@@ -98,6 +98,21 @@ export class IngestReviewedProductsDto {
   products!: CandidateProductDto[];
 }
 
+export class FetchOpenBeautyFactsCandidatesDto {
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  queries?: string[] = [];
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number = 25;
+}
+
 export class ListCandidatesQueryDto {
   @IsOptional()
   @IsEnum(CatalogCandidateStatus)

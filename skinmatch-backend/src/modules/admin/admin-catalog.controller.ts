@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@ne
 import { AdminKeyGuard } from "./admin-key.guard";
 import { AdminCatalogService } from "./admin-catalog.service";
 import {
+  FetchOpenBeautyFactsCandidatesDto,
   IngestReviewedProductsDto,
   ListCandidatesQueryDto,
   ListIngredientsQueryDto,
@@ -19,6 +20,12 @@ export class AdminCatalogController {
   @Post("candidates/from-reviewed-products")
   ingestReviewedProducts(@Body() dto: IngestReviewedProductsDto) {
     return this.adminCatalogService.ingestReviewedProducts(dto.products);
+  }
+
+  @UseGuards(AdminKeyGuard)
+  @Post("candidates/fetch-open-beauty-facts")
+  fetchOpenBeautyFactsCandidates(@Body() dto: FetchOpenBeautyFactsCandidatesDto) {
+    return this.adminCatalogService.fetchOpenBeautyFactsCandidates(dto);
   }
 
   @UseGuards(AdminKeyGuard)

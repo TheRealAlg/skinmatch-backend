@@ -13,6 +13,12 @@ export class AdminPanelController {
 
   @Get("catalog/panel")
   async panel(@Res() response: Response) {
-    response.type("html").send(await this.adminCatalogService.getPanelHtml());
+    response
+      .setHeader(
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https:; base-uri 'self'; form-action 'self'"
+      )
+      .type("html")
+      .send(await this.adminCatalogService.getPanelHtml());
   }
 }
