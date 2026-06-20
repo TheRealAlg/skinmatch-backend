@@ -8,6 +8,7 @@ import {
 } from "@prisma/client";
 import {
   ReviewedCatalogProduct,
+  ReviewedIngredientMappingInput,
   normalizeGtin,
   normalizeKey,
   officialReferenceText,
@@ -207,15 +208,22 @@ async function upsertReviewedProduct(
 
   await tx.productMarketIngredient.deleteMany({ where: { productMarketId: marketProduct.id } });
   const ingredientRows = splitInciIngredients(product.rawIngredientText);
+  const reviewedMappings = reviewedIngredientMappings(product);
   for (const [index, rawIngredient] of ingredientRows.entries()) {
-    const ingredient = await upsertIngredient(tx, rawIngredient, product.ingredientAliases ?? []);
+    const reviewedMapping = reviewedMappings.get(normalizeKey(rawIngredient));
+    const ingredient = await upsertIngredient(
+      tx,
+      rawIngredient,
+      product.ingredientAliases ?? [],
+      reviewedMapping
+    );
     await tx.productMarketIngredient.create({
       data: {
         productMarketId: marketProduct.id,
         ingredientId: ingredient.id,
         position: index + 1,
         rawText: rawIngredient,
-        mappingConfidence: DataConfidence.low
+        mappingConfidence: reviewedMapping?.mappingConfidence ?? DataConfidence.low
       }
     });
   }
@@ -224,45 +232,58 @@ async function upsertReviewedProduct(
 async function upsertIngredient(
   tx: Prisma.TransactionClient,
   rawIngredient: string,
-  aliases: ReviewedCatalogProduct["ingredientAliases"]
+  aliases: ReviewedCatalogProduct["ingredientAliases"],
+  reviewedMapping?: ReviewedIngredientMappingInput
 ) {
-  const normalizedName = normalizeKey(rawIngredient);
+  const ingredientName = reviewedMapping?.inciName?.trim() || rawIngredient;
+  const normalizedName = normalizeKey(ingredientName);
   const matchingAlias = aliases?.find(
     (alias) => normalizeKey(alias.inciName) === normalizedName
   );
 
   const ingredient = await tx.ingredient.upsert({
     where: { normalizedName },
-    update: { inciName: rawIngredient },
+    update: { inciName: ingredientName },
     create: {
-      inciName: rawIngredient,
+      inciName: ingredientName,
       normalizedName
     }
   });
 
-  if (matchingAlias?.displayName) {
+  const displayNameTr = reviewedMapping?.displayNameTr ?? matchingAlias?.displayName;
+  const descriptionTr = reviewedMapping?.descriptionTr ?? matchingAlias?.description;
+  if (displayNameTr || descriptionTr) {
     await tx.ingredientLocalization.upsert({
       where: {
         ingredientId_locale: {
           ingredientId: ingredient.id,
-          locale: matchingAlias.locale
+          locale: "tr-TR"
         }
       },
-      update: { displayName: matchingAlias.displayName },
+      update: {
+        displayName: displayNameTr ?? ingredientName,
+        description: descriptionTr
+      },
       create: {
         ingredientId: ingredient.id,
-        locale: matchingAlias.locale,
-        displayName: matchingAlias.displayName
+        locale: "tr-TR",
+        displayName: displayNameTr ?? ingredientName,
+        description: descriptionTr
       }
     });
   }
 
-  for (const synonym of matchingAlias?.synonyms ?? []) {
+  const synonyms = [
+    ...(matchingAlias?.synonyms ?? []),
+    ...(reviewedMapping?.aliases ?? []),
+    rawIngredient
+  ];
+  for (const synonym of uniqueNormalized(synonyms)) {
     await tx.ingredientSynonym.upsert({
       where: {
         ingredientId_locale_normalizedSynonym: {
           ingredientId: ingredient.id,
-          locale: matchingAlias?.locale ?? "und",
+          locale: "tr-TR",
           normalizedSynonym: normalizeKey(synonym)
         }
       },
@@ -272,7 +293,7 @@ async function upsertIngredient(
       },
       create: {
         ingredientId: ingredient.id,
-        locale: matchingAlias?.locale ?? "und",
+        locale: "tr-TR",
         synonym,
         normalizedSynonym: normalizeKey(synonym),
         source: "reviewed_catalog_import"
@@ -281,6 +302,28 @@ async function upsertIngredient(
   }
 
   return ingredient;
+}
+
+function reviewedIngredientMappings(product: ReviewedCatalogProduct) {
+  const mappings = new Map<string, ReviewedIngredientMappingInput>();
+  for (const mapping of product.ingredientMappings ?? []) {
+    const key = normalizeKey(mapping.rawText);
+    if (key && mapping.inciName?.trim()) mappings.set(key, mapping);
+  }
+  return mappings;
+}
+
+function uniqueNormalized(values: string[]) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const trimmed = value.trim();
+    const normalized = normalizeKey(trimmed);
+    if (!trimmed || !normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    result.push(trimmed);
+  }
+  return result;
 }
 
 async function main() {

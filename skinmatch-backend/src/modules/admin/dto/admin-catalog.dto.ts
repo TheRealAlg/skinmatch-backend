@@ -18,6 +18,32 @@ import {
   ValidateNested
 } from "class-validator";
 
+export class ReviewedIngredientMappingDto {
+  @IsString()
+  rawText!: string;
+
+  @IsString()
+  inciName!: string;
+
+  @IsOptional()
+  @IsString()
+  displayNameTr?: string;
+
+  @IsOptional()
+  @IsString()
+  descriptionTr?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(30)
+  @IsString({ each: true })
+  aliases?: string[] = [];
+
+  @IsOptional()
+  @IsEnum(DataConfidence)
+  mappingConfidence?: DataConfidence;
+}
+
 export class CandidateProductDto {
   @IsBoolean()
   approvedForImport!: boolean;
@@ -88,6 +114,21 @@ export class CandidateProductDto {
   @IsOptional()
   @IsString()
   imageUsageRightsNote?: string;
+
+  @IsOptional()
+  @IsString()
+  verificationMethod?: string;
+
+  @IsOptional()
+  @IsString()
+  verificationCheckedAt?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => ReviewedIngredientMappingDto)
+  ingredientMappings?: ReviewedIngredientMappingDto[] = [];
 }
 
 export class IngestReviewedProductsDto {
@@ -151,6 +192,10 @@ export class ReviewCandidateDto {
 
   @IsOptional()
   @IsString()
+  globalCanonicalName?: string;
+
+  @IsOptional()
+  @IsString()
   barcodeGtin?: string;
 
   @IsOptional()
@@ -166,16 +211,35 @@ export class ReviewCandidateDto {
   sourceUrl?: string;
 
   @IsOptional()
-  @IsUrl({ require_tld: false })
+  @IsString()
   imageUrl?: string;
 
   @IsOptional()
-  @IsUrl({ require_tld: false })
+  @IsString()
   imageSourceUrl?: string;
 
   @IsOptional()
   @IsString()
   imageUsageRightsNote?: string;
+
+  @IsOptional()
+  @IsString()
+  verificationMethod?: string;
+
+  @IsOptional()
+  @IsString()
+  verificationCheckedAt?: string;
+
+  @IsOptional()
+  @IsString()
+  imageAltText?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => ReviewedIngredientMappingDto)
+  ingredientMappings?: ReviewedIngredientMappingDto[] = [];
 
   @IsOptional()
   @IsEnum(VerificationStatus)

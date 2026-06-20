@@ -23,7 +23,17 @@ export type IngredientAliasInput = {
   inciName: string;
   locale: string;
   displayName?: string;
+  description?: string;
   synonyms?: string[];
+};
+
+export type ReviewedIngredientMappingInput = {
+  rawText: string;
+  inciName: string;
+  displayNameTr?: string;
+  descriptionTr?: string;
+  aliases?: string[];
+  mappingConfidence?: DataConfidence;
 };
 
 export type ReviewedCatalogProduct = {
@@ -53,6 +63,7 @@ export type ReviewedCatalogProduct = {
   imageSourceUrl?: string;
   imageUsageRightsNote?: string;
   ingredientAliases?: IngredientAliasInput[];
+  ingredientMappings?: ReviewedIngredientMappingInput[];
 };
 
 export type CandidateFile = {

@@ -35,6 +35,12 @@ export class AdminCatalogController {
   }
 
   @UseGuards(AdminKeyGuard)
+  @Get("candidates/:id/review-workspace")
+  getCandidateReviewWorkspace(@Param("id") id: string) {
+    return this.adminCatalogService.getCandidateReviewWorkspace(id);
+  }
+
+  @UseGuards(AdminKeyGuard)
   @Get("issues/summary")
   issueSummary() {
     return this.adminCatalogService.issueSummary();

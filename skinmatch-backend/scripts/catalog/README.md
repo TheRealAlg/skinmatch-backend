@@ -25,6 +25,7 @@ The backend also exposes a review queue for product operations:
   - `POST /api/v1/admin/catalog/candidates/fetch-open-beauty-facts`
 - List/review/import candidates:
   - `GET /api/v1/admin/catalog/candidates`
+  - `GET /api/v1/admin/catalog/candidates/:id/review-workspace`
   - `PATCH /api/v1/admin/catalog/candidates/:id/review`
   - `POST /api/v1/admin/catalog/candidates/:id/import`
   - `POST /api/v1/admin/catalog/candidates/import-approved`
@@ -79,6 +80,11 @@ Optional fields:
 - `imageSourceUrl`
 - `imageUsageRightsNote`
 - `ingredientAliases`
+- `ingredientMappings`
+
+`ingredientMappings` lets the review workstation preserve curated ingredient
+identity before import. Each row may include `rawText`, reviewed `inciName`,
+Turkish display/description, aliases, and `mappingConfidence`.
 
 ## Official Implementation References
 

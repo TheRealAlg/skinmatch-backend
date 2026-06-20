@@ -92,6 +92,9 @@ describe("Admin catalog ops API (e2e)", () => {
       where: { barcodeGtin: { in: [gtin, multiIssueGtin] } }
     });
     await prisma.ingredient.deleteMany({ where: { normalizedName: "madecassoside" } });
+    await prisma.ingredient.deleteMany({
+      where: { normalizedName: { in: ["curcuma-longa-root-extract", "secretum-extract"] } }
+    });
     await prisma.catalogCategory.deleteMany({ where: { key: "mystery-category" } });
   });
 
@@ -195,6 +198,29 @@ describe("Admin catalog ops API (e2e)", () => {
         expect.objectContaining({ issueKey: "unknown_category" }),
         expect.objectContaining({ issueKey: "unknown_ingredient" })
       ])
+    );
+
+    const workspaceResponse = await requestJson<{
+      draft: { localProductName: string; rawIngredientText: string };
+      parsedIngredientTokens: Array<{ rawText: string; issueKeys: string[] }>;
+      categoryOptions: Array<{ key: string; suggested: boolean }>;
+      appPreview: { localProductName: string; ingredients: Array<{ rawText: string }> };
+    }>(`/admin/catalog/candidates/${candidate?.id}/review-workspace`);
+    expect(workspaceResponse.status).toBe(200);
+    expect(workspaceResponse.body.data).toEqual(
+      expect.objectContaining({
+        draft: expect.objectContaining({
+          localProductName: "Mystery Barrier Gel",
+          rawIngredientText: "Aqua, Madecassoside"
+        }),
+        parsedIngredientTokens: expect.arrayContaining([
+          expect.objectContaining({ rawText: "Aqua" }),
+          expect.objectContaining({ rawText: "Madecassoside" })
+        ]),
+        appPreview: expect.objectContaining({
+          localProductName: "Mystery Barrier Gel"
+        })
+      })
     );
 
     const duplicateIngestResponse = await requestJson<CandidateResponse>(
@@ -330,7 +356,7 @@ describe("Admin catalog ops API (e2e)", () => {
     expect(importedDuplicateResponse.body.data?.candidates[0].status).toBe("imported");
   });
 
-  it("keeps multi-ingredient review issues from becoming approve/import 500s", async () => {
+  it("supports workspace ingredient mappings before approval and app import", async () => {
     const ingestResponse = await requestJson<CandidateResponse>(
       "/admin/catalog/candidates/from-reviewed-products",
       {
@@ -385,6 +411,114 @@ describe("Admin catalog ops API (e2e)", () => {
     expect(importResponse.status).toBe(400);
     expect(importResponse.body.error?.message).toBe(
       "Candidate must be approved and have no unresolved issues before import"
+    );
+
+    const resolvedReviewResponse = await requestJson<CandidateResponse["candidates"][0]>(
+      `/admin/catalog/candidates/${candidate?.id}/review`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          approvedForImport: true,
+          reviewer: "admin-e2e",
+          ingredientMappings: [
+            {
+              rawText: "Mystery Root",
+              inciName: "Curcuma Longa Root Extract",
+              displayNameTr: "Gizemli kok ekstresi",
+              descriptionTr: "Admin review fixture ingredient mapping.",
+              aliases: ["Mystery Root"],
+              mappingConfidence: DataConfidence.medium
+            },
+            {
+              rawText: "Secret Extract",
+              inciName: "Secretum Extract",
+              displayNameTr: "Secretum ekstresi",
+              descriptionTr: "Admin review fixture ingredient mapping.",
+              aliases: ["Secret Extract"],
+              mappingConfidence: DataConfidence.high
+            }
+          ]
+        })
+      }
+    );
+    expect(resolvedReviewResponse.status).toBe(200);
+    expect(resolvedReviewResponse.body.data?.status).toBe("approved");
+    expect(resolvedReviewResponse.body.data?.issues).toHaveLength(0);
+
+    const resolvedImportResponse = await requestJson<{ productMarketId: string | null }>(
+      `/admin/catalog/candidates/${candidate?.id}/import`,
+      { method: "POST" }
+    );
+    expect(resolvedImportResponse.status).toBe(201);
+    expect(resolvedImportResponse.body.data?.productMarketId).toEqual(expect.any(String));
+
+    const product = await prisma.productMarket.findUniqueOrThrow({
+      where: {
+        marketId_barcodeGtin: {
+          marketId: (await prisma.market.findUniqueOrThrow({ where: { marketCode: "TR" } })).id,
+          barcodeGtin: multiIssueGtin
+        }
+      },
+      include: {
+        ingredients: {
+          orderBy: { position: "asc" },
+          include: { ingredient: { include: { localizations: true, synonyms: true } } }
+        }
+      }
+    });
+    expect(product.ingredients).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rawText: "Mystery Root",
+          mappingConfidence: DataConfidence.medium,
+          ingredient: expect.objectContaining({
+            inciName: "Curcuma Longa Root Extract",
+            localizations: expect.arrayContaining([
+              expect.objectContaining({ locale: "tr-TR", displayName: "Gizemli kok ekstresi" })
+            ]),
+            synonyms: expect.arrayContaining([
+              expect.objectContaining({ synonym: "Mystery Root" })
+            ])
+          })
+        }),
+        expect.objectContaining({
+          rawText: "Secret Extract",
+          mappingConfidence: DataConfidence.high,
+          ingredient: expect.objectContaining({
+            inciName: "Secretum Extract"
+          })
+        })
+      ])
+    );
+
+    const searchResponse = await requestJson<{
+      products: Array<{ id: string; localProductName: string; barcodeGtin: string }>;
+    }>(`/products/search?q=${encodeURIComponent("Two Mystery Ingredient")}`);
+    expect(searchResponse.status).toBe(200);
+    expect(searchResponse.body.data?.products).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ barcodeGtin: multiIssueGtin })
+      ])
+    );
+
+    const productId = searchResponse.body.data?.products.find(
+      (item) => item.barcodeGtin === multiIssueGtin
+    )?.id;
+    const detailResponse = await requestJson<{
+      product: {
+        rawIngredientText: string;
+        ingredients: Array<{ rawText: string; mappingConfidence: string; displayName: string }>;
+      };
+    }>(`/products/${productId}`);
+    expect(detailResponse.status).toBe(200);
+    expect(detailResponse.body.data?.product.ingredients).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rawText: "Mystery Root",
+          mappingConfidence: DataConfidence.medium,
+          displayName: "Gizemli kok ekstresi"
+        })
+      ])
     );
   });
 });
