@@ -49,6 +49,7 @@ describe("Admin catalog ops API (e2e)", () => {
   let prisma: PrismaService;
   const adminKey = "skinmatch-local-admin";
   const gtin = "8690000000098";
+  const multiIssueGtin = "8690000000104";
 
   beforeAll(async () => {
     process.env.NODE_ENV = "test";
@@ -82,10 +83,14 @@ describe("Admin catalog ops API (e2e)", () => {
     prisma = app.get(PrismaService);
     await seedDatabase(prisma);
     await prisma.catalogCandidateIssue.deleteMany({
-      where: { candidate: { barcodeGtin: gtin } }
+      where: { candidate: { barcodeGtin: { in: [gtin, multiIssueGtin] } } }
     });
-    await prisma.catalogCandidate.deleteMany({ where: { barcodeGtin: gtin } });
-    await prisma.productMarket.deleteMany({ where: { barcodeGtin: gtin } });
+    await prisma.catalogCandidate.deleteMany({
+      where: { barcodeGtin: { in: [gtin, multiIssueGtin] } }
+    });
+    await prisma.productMarket.deleteMany({
+      where: { barcodeGtin: { in: [gtin, multiIssueGtin] } }
+    });
     await prisma.ingredient.deleteMany({ where: { normalizedName: "madecassoside" } });
     await prisma.catalogCategory.deleteMany({ where: { key: "mystery-category" } });
   });
@@ -323,5 +328,63 @@ describe("Admin catalog ops API (e2e)", () => {
       })
     );
     expect(importedDuplicateResponse.body.data?.candidates[0].status).toBe("imported");
+  });
+
+  it("keeps multi-ingredient review issues from becoming approve/import 500s", async () => {
+    const ingestResponse = await requestJson<CandidateResponse>(
+      "/admin/catalog/candidates/from-reviewed-products",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          products: [
+            {
+              approvedForImport: false,
+              brandName: "Ops Test",
+              localProductName: "Two Mystery Ingredient Serum",
+              category: "serum",
+              barcodeGtin: multiIssueGtin,
+              rawIngredientText: "Aqua, Mystery Root, Secret Extract",
+              sourceName: "admin_fixture",
+              sourceUrl: "https://example.org/admin-fixture/two-mystery-ingredient-serum",
+              verificationStatus: VerificationStatus.label_reviewed,
+              dataConfidence: DataConfidence.medium,
+              imageUrl: "https://example.org/admin-fixture/two-mystery-ingredient-serum.png",
+              imageSourceUrl: "https://example.org/admin-fixture/two-mystery-ingredient-serum",
+              imageUsageRightsNote: "Admin e2e fixture image."
+            }
+          ]
+        })
+      }
+    );
+    expect(ingestResponse.status).toBe(201);
+    const candidate = ingestResponse.body.data?.candidates[0];
+    expect(
+      candidate?.issues.filter((issue) => issue.issueKey === "unknown_ingredient")
+    ).toHaveLength(2);
+
+    const reviewResponse = await requestJson<CandidateResponse["candidates"][0]>(
+      `/admin/catalog/candidates/${candidate?.id}/review`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          approvedForImport: true,
+          reviewer: "admin-e2e"
+        })
+      }
+    );
+    expect(reviewResponse.status).toBe(200);
+    expect(reviewResponse.body.data?.status).toBe("needs_review");
+    expect(
+      reviewResponse.body.data?.issues.filter((issue) => issue.issueKey === "unknown_ingredient")
+    ).toHaveLength(2);
+
+    const importResponse = await requestJson(
+      `/admin/catalog/candidates/${candidate?.id}/import`,
+      { method: "POST" }
+    );
+    expect(importResponse.status).toBe(400);
+    expect(importResponse.body.error?.message).toBe(
+      "Candidate must be approved and have no unresolved issues before import"
+    );
   });
 });

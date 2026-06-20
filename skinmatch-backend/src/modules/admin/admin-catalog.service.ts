@@ -10,7 +10,10 @@ import {
   splitInciIngredients,
   validateReviewedProduct
 } from "../../../scripts/catalog/catalog-shared";
-import { importReviewedCatalogProducts } from "../../../scripts/catalog/import-reviewed";
+import {
+  CatalogImportValidationError,
+  importReviewedCatalogProducts
+} from "../../../scripts/catalog/import-reviewed";
 import { fetchOpenBeautyFactsCandidates as fetchOpenBeautyFactsCandidateFiles } from "../../../scripts/catalog/fetch-open-beauty-facts";
 import {
   FetchOpenBeautyFactsCandidatesDto,
@@ -200,7 +203,17 @@ export class AdminCatalogService {
       throw new BadRequestException("Candidate must be approved and have no unresolved issues before import");
     }
 
-    await importReviewedCatalogProducts([product], this.prisma);
+    try {
+      await importReviewedCatalogProducts([product], this.prisma);
+    } catch (error) {
+      if (error instanceof CatalogImportValidationError) {
+        throw new BadRequestException({
+          message: "Candidate failed reviewed catalog import validation",
+          details: error.issues
+        });
+      }
+      throw error;
+    }
     const imported = await this.prisma.productMarket.findFirst({
       where: {
         barcodeGtin: normalizeGtin(product.barcodeGtin),
@@ -672,14 +685,14 @@ export class AdminCatalogService {
       if (!existing) {
         issues.push({
           issueKey: "unknown_ingredient",
-          field: "rawIngredientText",
+          field: ingredientIssueField(rawIngredient),
           severity: "warning",
           message: `Ingredient needs review: ${rawIngredient}`
         });
       } else if (!existing.localizations.some((localization) => localization.locale === "tr-TR")) {
         issues.push({
           issueKey: "missing_tr_localization",
-          field: "rawIngredientText",
+          field: ingredientIssueField(rawIngredient),
           severity: "warning",
           message: `Ingredient is missing Turkish localization: ${rawIngredient}`
         });
@@ -745,7 +758,8 @@ export class AdminCatalogService {
         field: issue.field,
         severity: issue.severity,
         message: issue.message
-      }))
+      })),
+      skipDuplicates: true
     });
   }
 
@@ -782,6 +796,10 @@ function toJson(value: unknown): Prisma.InputJsonValue {
 function toNullableJson(value: unknown): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput {
   if (value === null || value === undefined) return Prisma.JsonNull;
   return toJson(value);
+}
+
+function ingredientIssueField(rawIngredient: string) {
+  return `rawIngredientText.${normalizeKey(rawIngredient)}`;
 }
 
 function dedupeIssues(issues: CandidateIssueDraft[]) {
