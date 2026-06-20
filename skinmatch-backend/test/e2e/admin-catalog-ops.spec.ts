@@ -44,7 +44,7 @@ describe("Admin catalog ops API (e2e)", () => {
   let app: INestApplication;
   let baseUrl: string;
   let prisma: PrismaService;
-  const adminKey = "test-admin-key";
+  const adminKey = "skinmatch-local-admin";
   const gtin = "8690000000098";
 
   beforeAll(async () => {
@@ -120,6 +120,19 @@ describe("Admin catalog ops API (e2e)", () => {
 
     expect(response.status).toBe(401);
     expect(response.body.error?.code).toBe("Unauthorized");
+  });
+
+  it("serves the browser admin panel without requiring a custom header", async () => {
+    const rootResponse = await fetch(`${baseUrl}/api/v1/admin`, {
+      redirect: "manual"
+    });
+    expect(rootResponse.status).toBe(302);
+    expect(rootResponse.headers.get("location")).toBe("/api/v1/admin/catalog/panel");
+
+    const panelResponse = await fetch(`${baseUrl}/api/v1/admin/catalog/panel`);
+    expect(panelResponse.status).toBe(200);
+    expect(panelResponse.headers.get("content-type")).toContain("text/html");
+    expect(await panelResponse.text()).toContain("SkinMatch Catalog Ops");
   });
 
   it("queues reviewed candidates, surfaces issues, approves, imports, and preserves Turkish curation", async () => {

@@ -19,7 +19,7 @@ git. Commit only curated fixtures or approved import files.
 
 The backend also exposes a review queue for product operations:
 
-- Panel: `GET /api/v1/admin/catalog/panel`
+- Panel: `GET /api/v1/admin` or `GET /api/v1/admin/catalog/panel`
 - Queue reviewed JSON: `POST /api/v1/admin/catalog/candidates/from-reviewed-products`
 - List/review/import candidates:
   - `GET /api/v1/admin/catalog/candidates`
@@ -32,8 +32,9 @@ The backend also exposes a review queue for product operations:
   - `POST /api/v1/admin/catalog/ingredients`
   - `PATCH /api/v1/admin/catalog/ingredients/:id/localizations/tr-TR`
 
-All admin routes require the `x-skinmatch-admin-key` header. Set
-`ADMIN_API_KEY` in `.env`; local development falls back to
+Admin API routes require the `x-skinmatch-admin-key` header. The browser panel
+is public so it can load normally; actions from the panel still send the admin
+key header. Set `ADMIN_API_KEY` in `.env`; local development falls back to
 `skinmatch-local-admin` when `NODE_ENV` is not `production`.
 
 The queue marks missing approvals, unknown categories, unknown ingredients,

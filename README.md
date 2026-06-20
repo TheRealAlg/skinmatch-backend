@@ -37,10 +37,9 @@ npm run start:dev
 NestJS dev server. If you prefer Docker/Postgres elsewhere, keep `DATABASE_URL`
 pointed at that database and run it before starting the backend.
 
-Catalog ops admin routes require `ADMIN_API_KEY`; local development defaults to
+Catalog ops API routes require `ADMIN_API_KEY`; local development defaults to
 `skinmatch-local-admin` outside production. The lightweight panel is available
-at `http://localhost:3000/api/v1/admin/catalog/panel` when the backend is
-running.
+at `http://localhost:3000/api/v1/admin` when the backend is running.
 
 Healthcheck:
 
