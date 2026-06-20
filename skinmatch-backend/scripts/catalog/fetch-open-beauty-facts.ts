@@ -12,7 +12,7 @@ import {
   toReviewCsv
 } from "./catalog-shared";
 
-const defaultQueries = ["serum", "cleanser", "moisturizer", "sunscreen", "toner", "mask"];
+const defaultQueries = ["serum", "cleanser", "moisturizer", "sunscreen", "toner", "clay mask"];
 const defaultFields = [
   "code",
   "product_name",

@@ -74,7 +74,7 @@ export class AdminCatalogService {
       queries:
         dto.queries && dto.queries.length > 0
           ? dto.queries
-          : ["serum", "cleanser", "moisturizer", "sunscreen", "toner", "mask"],
+          : ["serum", "cleanser", "moisturizer", "sunscreen", "toner", "clay mask"],
       limit: dto.limit ?? 25,
       outputDir: path.resolve(process.cwd(), "catalog-candidates")
     });
@@ -158,7 +158,9 @@ export class AdminCatalogService {
 
   async getCandidateReviewWorkspace(id: string) {
     const candidate = await this.getCandidate(id);
-    const product = this.payloadToProduct(candidate.payload);
+    const product = await this.applyReferenceIngredientMappings(
+      this.payloadToProduct(candidate.payload)
+    );
     const ingredientTokens = this.parsedIngredientTokens(product, candidate.issues);
     const existingProduct = await this.prisma.productMarket.findFirst({
       where: {
@@ -176,6 +178,7 @@ export class AdminCatalogService {
       candidate,
       draft: product,
       parsedIngredientTokens: ingredientTokens,
+      referenceIngredients: await this.referenceIngredients(),
       categoryOptions: await this.categoryOptions(product),
       ingredientSuggestions: await this.ingredientSuggestions(ingredientTokens),
       duplicateStatus: {
@@ -193,7 +196,7 @@ export class AdminCatalogService {
     if (!candidate) throw new NotFoundException("Catalog candidate was not found");
 
     const payload = this.payloadToProduct(candidate.payload);
-    const updatedPayload: ReviewedCatalogProduct = {
+    const mergedPayload: ReviewedCatalogProduct = {
       ...payload,
       ...(dto.brandName !== undefined ? { brandName: dto.brandName } : {}),
       ...(dto.localProductName !== undefined ? { localProductName: dto.localProductName } : {}),
@@ -230,6 +233,7 @@ export class AdminCatalogService {
       ...(dto.reviewer !== undefined ? { reviewer: dto.reviewer } : {}),
       ...(dto.reviewNotes !== undefined ? { reviewNotes: dto.reviewNotes } : {})
     };
+    const updatedPayload = await this.applyReferenceIngredientMappings(mergedPayload);
     const issueDrafts = await this.detectIssues(updatedPayload);
     const status =
       dto.status ??
@@ -590,7 +594,9 @@ export class AdminCatalogService {
     candidate: Awaited<ReturnType<AdminCatalogService["getCandidate"]>>;
     disposition: CandidateDisposition;
   }> {
-    const reviewedProduct = product as ReviewedCatalogProduct;
+    const reviewedProduct = await this.applyReferenceIngredientMappings(
+      product as ReviewedCatalogProduct
+    );
     const issueDrafts = await this.detectIssues(reviewedProduct);
     const status =
       reviewedProduct.approvedForImport && issueDrafts.length === 0
@@ -633,6 +639,53 @@ export class AdminCatalogService {
     return {
       candidate: await this.getCandidate(saved.id),
       disposition
+    };
+  }
+
+  private async applyReferenceIngredientMappings(product: ReviewedCatalogProduct) {
+    const existingMappings = ingredientMappingByRawText(product);
+    const mappings: NonNullable<ReviewedCatalogProduct["ingredientMappings"]> = [];
+
+    for (const rawText of splitInciIngredients(product.rawIngredientText)) {
+      const existingMapping = existingMappings.get(normalizeKey(rawText));
+      const reference = await this.referenceIngredientForRawText(
+        existingMapping?.inciName ?? rawText
+      );
+      if (existingMapping) {
+        mappings.push({
+          ...existingMapping,
+          displayNameTr:
+            existingMapping.displayNameTr ?? reference?.displayNameTr ?? undefined,
+          descriptionTr:
+            existingMapping.descriptionTr ?? reference?.descriptionTr ?? undefined,
+          aliases: uniqueNormalized([
+            ...(existingMapping.aliases ?? []),
+            rawText,
+            ...(reference?.aliases ?? [])
+          ]),
+          mappingConfidence:
+            existingMapping.mappingConfidence ??
+            reference?.suggestedConfidence ??
+            DataConfidence.low
+        });
+        continue;
+      }
+
+      if (reference) {
+        mappings.push({
+          rawText,
+          inciName: reference.inciName,
+          displayNameTr: reference.displayNameTr ?? undefined,
+          descriptionTr: reference.descriptionTr ?? undefined,
+          aliases: uniqueNormalized([rawText, ...reference.aliases]),
+          mappingConfidence: reference.suggestedConfidence
+        });
+      }
+    }
+
+    return {
+      ...product,
+      ingredientMappings: mappings
     };
   }
 
@@ -730,6 +783,92 @@ export class AdminCatalogService {
         suggestions: await this.findIngredientSuggestions(token.rawText, token.mappedInciName)
       }))
     );
+  }
+
+  private async referenceIngredients() {
+    const ingredients = await this.prisma.ingredient.findMany({
+      include: {
+        localizations: true,
+        synonyms: true,
+        functions: true,
+        flags: true
+      },
+      orderBy: [{ inciName: "asc" }],
+      take: 250
+    });
+
+    return ingredients.map((ingredient) => this.referenceIngredientDto(ingredient, "manual"));
+  }
+
+  private async referenceIngredientForRawText(rawText: string) {
+    const normalized = normalizeKey(rawText);
+    const exact = await this.prisma.ingredient.findUnique({
+      where: { normalizedName: normalized },
+      include: {
+        localizations: true,
+        synonyms: true,
+        functions: true,
+        flags: true
+      }
+    });
+    if (exact) return this.referenceIngredientDto(exact, "exact");
+
+    const synonym = await this.prisma.ingredientSynonym.findFirst({
+      where: { normalizedSynonym: normalized },
+      include: {
+        ingredient: {
+          include: {
+            localizations: true,
+            synonyms: true,
+            functions: true,
+            flags: true
+          }
+        }
+      }
+    });
+    if (synonym) return this.referenceIngredientDto(synonym.ingredient, "synonym");
+
+    return null;
+  }
+
+  private referenceIngredientDto(
+    ingredient: Prisma.IngredientGetPayload<{
+      include: {
+        localizations: true;
+        synonyms: true;
+        functions: true;
+        flags: true;
+      };
+    }>,
+    matchType: "exact" | "synonym" | "manual"
+  ) {
+    const trLocalization =
+      ingredient.localizations.find((localization) => localization.locale === "tr-TR") ??
+      ingredient.localizations[0] ??
+      null;
+
+    return {
+      id: ingredient.id,
+      inciName: ingredient.inciName,
+      normalizedName: ingredient.normalizedName,
+      displayNameTr: trLocalization?.displayName ?? null,
+      descriptionTr: trLocalization?.description ?? null,
+      aliases: ingredient.synonyms.map((synonym) => synonym.synonym),
+      functions: ingredient.functions.map((item) => ({
+        functionKey: item.functionKey,
+        labelTr: item.labelTr,
+        noteTr: item.noteTr
+      })),
+      flags: ingredient.flags.map((item) => ({
+        flagKey: item.flagKey,
+        labelTr: item.labelTr,
+        noteTr: item.noteTr,
+        confidence: item.confidence
+      })),
+      matchType,
+      suggestedConfidence:
+        matchType === "exact" ? DataConfidence.high : DataConfidence.medium
+    };
   }
 
   private async findIngredientSuggestions(rawText: string, mappedInciName: string | null) {
@@ -1095,6 +1234,19 @@ function ingredientMappingByRawText(product: ReviewedCatalogProduct) {
   return mappings;
 }
 
+function uniqueNormalized(values: string[]) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const trimmed = value.trim();
+    const normalized = normalizeKey(trimmed);
+    if (!trimmed || !normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    result.push(trimmed);
+  }
+  return result;
+}
+
 function isString(value: string | null): value is string {
   return typeof value === "string" && value.length > 0;
 }
@@ -1148,11 +1300,26 @@ const adminPanelHtml = `<!doctype html>
     .preview { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: start; }
     .preview img { width: 150px; aspect-ratio: 3 / 4; object-fit: contain; background: #f7efe7; border-radius: 8px; border: 1px solid var(--line); }
     .image-fallback { width: 150px; aspect-ratio: 3 / 4; display: grid; place-items: center; background: #f7efe7; border-radius: 8px; color: var(--muted); text-align: center; padding: 12px; border: 1px solid var(--line); }
-    .mapping-row { display: grid; grid-template-columns: minmax(130px, .8fr) repeat(4, minmax(0, 1fr)); gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); }
+    .mapping-list { display: grid; gap: 8px; margin-top: 10px; }
+    .mapping-row { display: grid; grid-template-columns: minmax(160px, .8fr) minmax(280px, 1.3fr) minmax(170px, .8fr) auto; gap: 8px; align-items: end; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fffdf9; }
+    .mapping-row.needs-review { border-color: #efc77d; background: #fff9ed; }
+    .mapping-row.matched { background: #fbfffc; }
+    .mapping-token { min-height: 52px; display: grid; gap: 4px; align-content: center; }
+    .mapping-token small, .reference-meta { color: var(--muted); font-size: 12px; }
+    .mapping-detail { display: none; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+    .mapping-row.expanded .mapping-detail { display: grid; }
+    .detail-toggle { align-self: center; white-space: nowrap; }
     .dropzone { min-height: 38px; border: 1px dashed #c7a998; border-radius: 8px; padding: 8px; background: #fffaf4; }
     .dropzone.active { background: #edf6ef; border-color: var(--green); }
+    .reference-library { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fffdf9; margin: 10px 0; }
+    .reference-library summary { cursor: pointer; font-weight: 800; }
+    .reference-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; max-height: 160px; overflow: auto; }
+    .reference-item { border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: white; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+    .reference-item:hover { border-color: var(--green); box-shadow: 0 0 0 2px rgba(86,128,105,.12); }
+    .match-ok { background: #dce9df; color: #264c3d; }
+    .match-miss { background: var(--warn); color: #422e12; }
     pre { white-space: pre-wrap; background: #221d1a; color: #fff7ed; padding: 12px; border-radius: 8px; max-height: 220px; overflow: auto; }
-    @media (max-width: 980px) { main { grid-template-columns: 1fr; } aside { position: static; max-height: none; } .grid, .mapping-row, .preview { grid-template-columns: 1fr; } }
+    @media (max-width: 980px) { main { grid-template-columns: 1fr; } aside { position: static; max-height: none; } .grid, .mapping-row, .mapping-detail, .preview { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -1162,7 +1329,7 @@ const adminPanelHtml = `<!doctype html>
     <label>Admin key<input id="key" type="password" value="skinmatch-local-admin" /></label>
     <div class="panel">
       <h2>Fetch</h2>
-      <label>Queries<input id="fetchQueries" value="serum,cleanser,moisturizer,sunscreen,toner,mask" /></label>
+      <label>Queries<input id="fetchQueries" value="serum,cleanser,moisturizer,sunscreen,toner,clay mask" /></label>
       <label>Limit<input id="fetchLimit" type="number" min="1" max="100" value="25" /></label>
       <p><button onclick="fetchOpenBeautyFacts()">Fetch + queue candidates</button></p>
     </div>
@@ -1212,9 +1379,19 @@ const adminPanelHtml = `<!doctype html>
     </section>
     <section class="panel">
       <h2>Ingredient mapping</h2>
-      <p>Drag a raw chip into a mapping row, or click a chip and use the selected token. Functions and flags are view-only in this slice.</p>
+      <p>Reference ingredients are matched first. Use auto-match for known ingredients, then review only the misses. Functions and flags are view-only in this slice.</p>
+      <div class="toolbar">
+        <div class="summary" id="mappingSummary"></div>
+        <button class="secondary" onclick="autoMatchReferences()">Auto-match reference ingredients</button>
+      </div>
       <div class="chips" id="tokenChips"></div>
-      <div id="ingredientMappings"></div>
+      <details class="reference-library">
+        <summary>Reference ingredient library</summary>
+        <p>Select a captured token, then click a reference ingredient to assign it. If no token is selected, the first unresolved token is used.</p>
+        <label>Search reference library<input id="referenceSearch" oninput="renderReferenceIngredients()" placeholder="Aqua, Glycerin, Niacinamide..." /></label>
+        <div class="reference-strip" id="referenceIngredients"></div>
+      </details>
+      <div class="mapping-list" id="ingredientMappings"></div>
     </section>
     <section class="panel">
       <h2>Issues</h2>
@@ -1231,6 +1408,7 @@ let candidates = [];
 let workspace = null;
 let selectedCandidateId = null;
 let selectedToken = null;
+let expandedMappingRows = {};
 
 const headers = () => ({ "content-type": "application/json", "x-skinmatch-admin-key": document.getElementById("key").value });
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
@@ -1289,6 +1467,7 @@ async function selectCandidate(id) {
   const json = await requestJson("/api/v1/admin/catalog/candidates/" + id + "/review-workspace", { headers: headers() });
   workspace = json.data;
   selectedToken = null;
+  expandedMappingRows = {};
   renderWorkspace();
 }
 function renderWorkspace() {
@@ -1301,6 +1480,7 @@ function renderWorkspace() {
   document.getElementById("approveImportBtn").disabled = hasBlockingIssues();
   renderPreview();
   renderDraftForm();
+  renderReferenceIngredients();
   renderTokens();
   renderMappings();
   renderIssues();
@@ -1337,22 +1517,144 @@ function renderDraftForm() {
 function input(name, label, value) { return '<label>' + label + '<input id="field_' + name + '" value="' + escapeHtml(value || "") + '" /></label>'; }
 function select(name, label, value, options) { return '<label>' + label + '<select id="field_' + name + '">' + options.map((option) => '<option value="' + option + '"' + (option === value ? " selected" : "") + '>' + option + '</option>').join("") + '</select></label>'; }
 function renderTokens() {
-  document.getElementById("tokenChips").innerHTML = workspace.parsedIngredientTokens.map((token) => '<span class="chip' + (selectedToken === token.rawText ? " selected" : "") + '" draggable="true" ondragstart="dragToken(event, decodeURIComponent(\\'' + encodeArg(token.rawText) + '\\'))" onclick="selectToken(decodeURIComponent(\\'' + encodeArg(token.rawText) + '\\'))">' + escapeHtml(token.rawText) + '</span>').join("");
+  const mapped = mappingByRawText();
+  document.getElementById("tokenChips").innerHTML = workspace.parsedIngredientTokens.map((token) => {
+    const mapping = mapped[token.rawText];
+    const reference = referenceForInci(mapping?.inciName || token.mappedInciName || token.rawText);
+    const statusClass = reference ? " match-ok" : " match-miss";
+    return '<span class="chip' + statusClass + (selectedToken === token.rawText ? " selected" : "") + '" draggable="true" ondragstart="dragToken(event, decodeURIComponent(\\'' + encodeArg(token.rawText) + '\\'))" onclick="selectToken(decodeURIComponent(\\'' + encodeArg(token.rawText) + '\\'))">' + escapeHtml(token.rawText) + '</span>';
+  }).join("");
+}
+function renderReferenceIngredients() {
+  const query = (document.getElementById("referenceSearch")?.value || "").toLowerCase();
+  const refs = (workspace?.referenceIngredients || []).filter((reference) => {
+    const haystack = [reference.inciName, reference.displayNameTr, ...(reference.aliases || [])].join(" ").toLowerCase();
+    return !query || haystack.includes(query);
+  }).slice(0, 40);
+  document.getElementById("referenceIngredients").innerHTML = refs.map((reference) => '<button type="button" class="reference-item" onclick="assignReferenceFromLibrary(\\'' + reference.id + '\\')"><strong>' + escapeHtml(reference.displayNameTr || reference.inciName) + '</strong><br><span>' + escapeHtml(reference.inciName) + '</span><br><span class="pill">' + escapeHtml(reference.functions?.[0]?.labelTr || "reference") + '</span></button>').join("");
 }
 function renderMappings() {
   const mapped = mappingByRawText();
+  let matchedCount = 0;
   document.getElementById("ingredientMappings").innerHTML = workspace.parsedIngredientTokens.map((token, index) => {
     const mapping = mapped[token.rawText] || { rawText: token.rawText, inciName: token.mappedInciName || token.rawText, displayNameTr: "", descriptionTr: "", aliases: [], mappingConfidence: token.mappingConfidence || "low" };
+    const reference = referenceForInci(mapping.inciName);
+    if (reference) matchedCount += 1;
+    const isExpanded = Boolean(expandedMappingRows[index] || !reference);
+    const rowClass = reference ? "matched" : "needs-review";
+    const referenceMeta = reference
+      ? '<div class="reference-meta">' + escapeHtml(reference.inciName) + (reference.functions?.length ? ' - ' + escapeHtml(reference.functions.slice(0, 2).map((item) => item.labelTr).join(", ")) : "") + '</div>'
+      : '<div class="reference-meta">Choose an existing reference or keep as a reviewed manual ingredient.</div>';
     const suggestions = (workspace.ingredientSuggestions.find((item) => item.rawText === token.rawText)?.suggestions || []).map((suggestion) => '<button class="ghost" onclick="useSuggestion(' + index + ', decodeURIComponent(\\'' + encodeArg(suggestion.inciName) + '\\'), decodeURIComponent(\\'' + encodeArg(suggestion.displayNameTr || "") + '\\'), decodeURIComponent(\\'' + encodeArg(suggestion.descriptionTr || "") + '\\'))">' + escapeHtml(suggestion.displayNameTr || suggestion.inciName) + '</button>').join(" ");
-    return '<div class="mapping-row"><div class="dropzone" ondragover="allowDrop(event)" ondrop="dropToken(event, ' + index + ')"><strong>' + escapeHtml(mapping.rawText) + '</strong><br><button class="ghost" onclick="useSelectedToken(' + index + ')">Use selected</button></div>' +
-      '<label>INCI<input data-map="inciName" data-index="' + index + '" value="' + escapeHtml(mapping.inciName || "") + '" /></label>' +
-      '<label>Turkish name<input data-map="displayNameTr" data-index="' + index + '" value="' + escapeHtml(mapping.displayNameTr || "") + '" /></label>' +
-      '<label>Turkish description<input data-map="descriptionTr" data-index="' + index + '" value="' + escapeHtml(mapping.descriptionTr || "") + '" /></label>' +
+    return '<div class="mapping-row ' + rowClass + (isExpanded ? " expanded" : "") + '">' +
+      '<div class="mapping-token dropzone" ondragover="allowDrop(event)" ondrop="dropToken(event, ' + index + ')"><span class="pill ' + (reference ? "match-ok" : "match-miss") + '">' + (reference ? "matched" : "needs review") + '</span><strong>' + escapeHtml(mapping.rawText) + '</strong><small>captured from label</small></div>' +
+      '<label>Reference ingredient<select data-map="referenceId" data-index="' + index + '" onchange="applyReferenceToRow(' + index + ', this.value)">' + referenceOptions(reference?.id) + '</select>' + referenceMeta + '</label>' +
+      '<label>Turkish label<input data-map="displayNameTr" data-index="' + index + '" value="' + escapeHtml(mapping.displayNameTr || reference?.displayNameTr || "") + '" /></label>' +
+      '<button type="button" class="ghost detail-toggle" onclick="toggleMappingDetails(' + index + ')">' + (isExpanded ? "Hide details" : "Edit") + '</button>' +
+      '<div class="mapping-detail">' +
       '<label>Confidence<select data-map="mappingConfidence" data-index="' + index + '"><option value="low"' + selected(mapping.mappingConfidence, "low") + '>low</option><option value="medium"' + selected(mapping.mappingConfidence, "medium") + '>medium</option><option value="high"' + selected(mapping.mappingConfidence, "high") + '>high</option></select></label>' +
-      '<label class="wide">Aliases<input data-map="aliases" data-index="' + index + '" value="' + escapeHtml((mapping.aliases || []).join(", ")) + '" /></label><div class="wide">' + suggestions + '</div></div>';
+      '<label>INCI<input data-map="inciName" data-index="' + index + '" value="' + escapeHtml(mapping.inciName || reference?.inciName || "") + '" /></label>' +
+      '<label>Aliases<input data-map="aliases" data-index="' + index + '" value="' + escapeHtml((mapping.aliases || reference?.aliases || []).join(", ")) + '" /></label>' +
+      '<label class="wide">Turkish description<input data-map="descriptionTr" data-index="' + index + '" value="' + escapeHtml(mapping.descriptionTr || reference?.descriptionTr || "") + '" /></label>' +
+      '<div class="wide">' + suggestions + '</div></div></div>';
   }).join("");
+  const total = workspace.parsedIngredientTokens.length;
+  document.getElementById("mappingSummary").innerHTML = '<span class="pill match-ok">' + matchedCount + ' matched</span><span class="pill match-miss">' + (total - matchedCount) + ' to review</span>';
 }
 function selected(value, expected) { return value === expected ? " selected" : ""; }
+function referenceOptions(selectedId) {
+  return '<option value="">New/manual ingredient</option>' + (workspace.referenceIngredients || []).map((reference) => '<option value="' + escapeHtml(reference.id) + '"' + (reference.id === selectedId ? " selected" : "") + '>' + escapeHtml((reference.displayNameTr || reference.inciName) + " - " + reference.inciName) + '</option>').join("");
+}
+function referenceForInci(inciName) {
+  const normalized = normalizeClient(inciName);
+  return (workspace.referenceIngredients || []).find((reference) => reference.normalizedName === normalized || normalizeClient(reference.inciName) === normalized) || null;
+}
+function referenceForRaw(rawText) {
+  const normalized = normalizeClient(rawText);
+  return (workspace.referenceIngredients || []).find((reference) => reference.normalizedName === normalized || (reference.aliases || []).some((alias) => normalizeClient(alias) === normalized)) || null;
+}
+function normalizeClient(value) {
+  return String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
+}
+function toggleMappingDetails(index) {
+  expandedMappingRows[index] = !expandedMappingRows[index];
+  renderMappings();
+}
+function mappingFromReference(token, reference, confidence) {
+  return {
+    rawText: token.rawText,
+    inciName: reference.inciName,
+    displayNameTr: reference.displayNameTr || "",
+    descriptionTr: reference.descriptionTr || "",
+    aliases: [token.rawText, ...(reference.aliases || [])],
+    mappingConfidence: confidence || reference.suggestedConfidence || "high"
+  };
+}
+function assignReferenceFromLibrary(referenceId) {
+  const mapped = mappingByRawText();
+  let index = selectedToken
+    ? workspace.parsedIngredientTokens.findIndex((token) => token.rawText === selectedToken)
+    : -1;
+  if (index < 0) {
+    index = workspace.parsedIngredientTokens.findIndex((token) => {
+      const mapping = mapped[token.rawText];
+      return !referenceForInci(mapping?.inciName || token.mappedInciName || token.rawText);
+    });
+  }
+  if (index < 0) index = 0;
+  if (!workspace.parsedIngredientTokens[index]) return;
+  selectedToken = workspace.parsedIngredientTokens[index]?.rawText || null;
+  applyReferenceToRow(index, referenceId);
+}
+function applyReferenceToRow(index, referenceId) {
+  const reference = (workspace.referenceIngredients || []).find((item) => item.id === referenceId);
+  const token = workspace.parsedIngredientTokens[index];
+  const nextMappings = collectMappings();
+  if (!reference) {
+    nextMappings[index] = {
+      rawText: token.rawText,
+      inciName: token.rawText,
+      displayNameTr: "",
+      descriptionTr: "",
+      aliases: [token.rawText],
+      mappingConfidence: "low"
+    };
+    expandedMappingRows[index] = true;
+  } else {
+    nextMappings[index] = mappingFromReference(token, reference, "high");
+    expandedMappingRows[index] = false;
+  }
+  workspace.draft.ingredientMappings = nextMappings;
+  renderMappings();
+  renderTokens();
+}
+function autoMatchReferences() {
+  workspace.draft.ingredientMappings = workspace.parsedIngredientTokens.map((token) => {
+    const reference = referenceForRaw(token.rawText);
+    if (!reference) {
+      const existing = mappingByRawText()[token.rawText];
+      return existing || {
+        rawText: token.rawText,
+        inciName: token.rawText,
+        displayNameTr: "",
+        descriptionTr: "",
+        aliases: [],
+        mappingConfidence: "low"
+      };
+    }
+    return {
+      rawText: token.rawText,
+      inciName: reference.inciName,
+      displayNameTr: reference.displayNameTr || "",
+      descriptionTr: reference.descriptionTr || "",
+      aliases: [token.rawText, ...(reference.aliases || [])],
+      mappingConfidence: "high"
+    };
+  });
+  expandedMappingRows = {};
+  renderMappings();
+  renderTokens();
+}
 function renderIssues() {
   const issues = workspace.candidate.issues || [];
   document.getElementById("issues").innerHTML = issues.length ? issues.map((issue) => '<span class="issue ' + escapeHtml(issue.severity) + '">' + escapeHtml(issue.issueKey) + ': ' + escapeHtml(issue.message) + '</span>').join(" ") : '<p>No blocking issues.</p>';
@@ -1366,13 +1668,38 @@ function setMappingRawText(index, rawText) {
   const token = workspace.parsedIngredientTokens.find((item) => item.rawText === rawText);
   if (!token) return;
   workspace.parsedIngredientTokens[index] = token;
+  const reference = referenceForRaw(token.rawText);
+  const nextMappings = collectMappings();
+  nextMappings[index] = reference
+    ? mappingFromReference(token, reference, reference.suggestedConfidence || "high")
+    : {
+        rawText: token.rawText,
+        inciName: token.rawText,
+        displayNameTr: "",
+        descriptionTr: "",
+        aliases: [token.rawText],
+        mappingConfidence: "low"
+      };
+  workspace.draft.ingredientMappings = nextMappings;
+  expandedMappingRows[index] = !reference;
   renderTokens();
   renderMappings();
 }
 function useSuggestion(index, inciName, displayNameTr, descriptionTr) {
-  document.querySelector('[data-map="inciName"][data-index="' + index + '"]').value = inciName;
-  document.querySelector('[data-map="displayNameTr"][data-index="' + index + '"]').value = displayNameTr;
-  document.querySelector('[data-map="descriptionTr"][data-index="' + index + '"]').value = descriptionTr;
+  const token = workspace.parsedIngredientTokens[index];
+  const nextMappings = collectMappings();
+  nextMappings[index] = {
+    rawText: token.rawText,
+    inciName,
+    displayNameTr,
+    descriptionTr,
+    aliases: [token.rawText],
+    mappingConfidence: "medium"
+  };
+  workspace.draft.ingredientMappings = nextMappings;
+  expandedMappingRows[index] = true;
+  renderMappings();
+  renderTokens();
 }
 function mappingByRawText() {
   const result = {};

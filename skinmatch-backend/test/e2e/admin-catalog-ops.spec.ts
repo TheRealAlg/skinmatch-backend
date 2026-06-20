@@ -201,8 +201,23 @@ describe("Admin catalog ops API (e2e)", () => {
     );
 
     const workspaceResponse = await requestJson<{
-      draft: { localProductName: string; rawIngredientText: string };
-      parsedIngredientTokens: Array<{ rawText: string; issueKeys: string[] }>;
+      draft: {
+        localProductName: string;
+        rawIngredientText: string;
+        ingredientMappings: Array<{
+          rawText: string;
+          inciName: string;
+          displayNameTr: string | null;
+          mappingConfidence: string;
+        }>;
+      };
+      parsedIngredientTokens: Array<{
+        rawText: string;
+        mappedInciName: string | null;
+        mappingConfidence: string | null;
+        issueKeys: string[];
+      }>;
+      referenceIngredients: Array<{ inciName: string; displayNameTr: string | null }>;
       categoryOptions: Array<{ key: string; suggested: boolean }>;
       appPreview: { localProductName: string; ingredients: Array<{ rawText: string }> };
     }>(`/admin/catalog/candidates/${candidate?.id}/review-workspace`);
@@ -214,13 +229,30 @@ describe("Admin catalog ops API (e2e)", () => {
           rawIngredientText: "Aqua, Madecassoside"
         }),
         parsedIngredientTokens: expect.arrayContaining([
-          expect.objectContaining({ rawText: "Aqua" }),
+          expect.objectContaining({
+            rawText: "Aqua",
+            mappedInciName: "Aqua",
+            mappingConfidence: DataConfidence.high
+          }),
           expect.objectContaining({ rawText: "Madecassoside" })
+        ]),
+        referenceIngredients: expect.arrayContaining([
+          expect.objectContaining({ inciName: "Aqua", displayNameTr: "Su" })
         ]),
         appPreview: expect.objectContaining({
           localProductName: "Mystery Barrier Gel"
         })
       })
+    );
+    expect(workspaceResponse.body.data?.draft.ingredientMappings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          rawText: "Aqua",
+          inciName: "Aqua",
+          displayNameTr: "Su",
+          mappingConfidence: DataConfidence.high
+        })
+      ])
     );
 
     const duplicateIngestResponse = await requestJson<CandidateResponse>(
