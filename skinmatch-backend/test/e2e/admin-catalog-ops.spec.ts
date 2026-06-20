@@ -22,6 +22,9 @@ type JsonResponse<T> = {
 
 type CandidateResponse = {
   importedToQueue: number;
+  created: number;
+  updated: number;
+  skipped: number;
   candidates: Array<{
     id: string;
     status: string;
@@ -137,36 +140,43 @@ describe("Admin catalog ops API (e2e)", () => {
     expect(panelHtml).toContain("SkinMatch Catalog Ops");
     expect(panelHtml).toContain("Fetch + queue candidates");
     expect(panelHtml).toContain("Ingest candidates");
+    expect(panelHtml).toContain("Import approved");
   });
 
   it("queues reviewed candidates, surfaces issues, approves, imports, and preserves Turkish curation", async () => {
+    const reviewedProduct = {
+      approvedForImport: false,
+      brandName: "Ops Test",
+      localProductName: "Mystery Barrier Gel",
+      category: "mystery-category",
+      barcodeGtin: gtin,
+      rawIngredientText: "Aqua, Madecassoside",
+      sourceName: "admin_fixture",
+      sourceUrl: "https://example.org/admin-fixture/mystery-barrier-gel",
+      verificationStatus: VerificationStatus.label_reviewed,
+      dataConfidence: DataConfidence.medium,
+      imageUrl: "https://example.org/admin-fixture/mystery-barrier-gel.png",
+      imageSourceUrl: "https://example.org/admin-fixture/mystery-barrier-gel",
+      imageUsageRightsNote: "Admin e2e fixture image."
+    };
     const ingestResponse = await requestJson<CandidateResponse>(
       "/admin/catalog/candidates/from-reviewed-products",
       {
         method: "POST",
         body: JSON.stringify({
-          products: [
-            {
-              approvedForImport: false,
-              brandName: "Ops Test",
-              localProductName: "Mystery Barrier Gel",
-              category: "mystery-category",
-              barcodeGtin: gtin,
-              rawIngredientText: "Aqua, Madecassoside",
-              sourceName: "admin_fixture",
-              sourceUrl: "https://example.org/admin-fixture/mystery-barrier-gel",
-              verificationStatus: VerificationStatus.label_reviewed,
-              dataConfidence: DataConfidence.medium,
-              imageUrl: "https://example.org/admin-fixture/mystery-barrier-gel.png",
-              imageSourceUrl: "https://example.org/admin-fixture/mystery-barrier-gel",
-              imageUsageRightsNote: "Admin e2e fixture image."
-            }
-          ]
+          products: [reviewedProduct]
         })
       }
     );
 
     expect(ingestResponse.status).toBe(201);
+    expect(ingestResponse.body.data).toEqual(
+      expect.objectContaining({
+        created: 1,
+        updated: 0,
+        skipped: 0
+      })
+    );
     const candidate = ingestResponse.body.data?.candidates[0];
     expect(candidate).toEqual(
       expect.objectContaining({
@@ -181,6 +191,25 @@ describe("Admin catalog ops API (e2e)", () => {
         expect.objectContaining({ issueKey: "unknown_ingredient" })
       ])
     );
+
+    const duplicateIngestResponse = await requestJson<CandidateResponse>(
+      "/admin/catalog/candidates/from-reviewed-products",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          products: [reviewedProduct]
+        })
+      }
+    );
+    expect(duplicateIngestResponse.status).toBe(201);
+    expect(duplicateIngestResponse.body.data).toEqual(
+      expect.objectContaining({
+        created: 0,
+        updated: 1,
+        skipped: 0
+      })
+    );
+    expect(duplicateIngestResponse.body.data?.candidates[0].id).toBe(candidate?.id);
 
     const categoryResponse = await requestJson(
       "/admin/catalog/categories",
@@ -275,5 +304,24 @@ describe("Admin catalog ops API (e2e)", () => {
         )
       )
     ).toBe(true);
+
+    const importedDuplicateResponse = await requestJson<CandidateResponse>(
+      "/admin/catalog/candidates/from-reviewed-products",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          products: [reviewedProduct]
+        })
+      }
+    );
+    expect(importedDuplicateResponse.status).toBe(201);
+    expect(importedDuplicateResponse.body.data).toEqual(
+      expect.objectContaining({
+        created: 0,
+        updated: 0,
+        skipped: 1
+      })
+    );
+    expect(importedDuplicateResponse.body.data?.candidates[0].status).toBe("imported");
   });
 });

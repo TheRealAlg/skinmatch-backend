@@ -30,19 +30,31 @@ type CandidateIssueDraft = {
   message: string;
 };
 
+type CandidateDisposition = "created" | "updated" | "skipped";
+
 @Injectable()
 export class AdminCatalogService {
   constructor(private readonly prisma: PrismaService) {}
 
   async ingestReviewedProducts(products: CandidateProductDto[]) {
-    const saved = [];
+    const candidates = [];
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
     for (const product of products) {
-      saved.push(await this.upsertCandidate(product));
+      const result = await this.upsertCandidate(product);
+      candidates.push(result.candidate);
+      if (result.disposition === "created") created += 1;
+      else if (result.disposition === "updated") updated += 1;
+      else skipped += 1;
     }
 
     return {
-      importedToQueue: saved.length,
-      candidates: saved
+      importedToQueue: candidates.length,
+      created,
+      updated,
+      skipped,
+      candidates
     };
   }
 
@@ -63,6 +75,9 @@ export class AdminCatalogService {
       source: "open_beauty_facts",
       productsFetched: result.products,
       queued: queueResult.importedToQueue,
+      created: queueResult.created,
+      updated: queueResult.updated,
+      skipped: queueResult.skipped,
       jsonPath: result.jsonPath,
       csvPath: result.csvPath,
       officialReferences: result.candidateFile.metadata.officialReferences,
@@ -180,7 +195,8 @@ export class AdminCatalogService {
   async importCandidate(id: string) {
     const candidate = await this.getCandidate(id);
     const product = this.payloadToProduct(candidate.payload);
-    if (!product.approvedForImport || candidate.issues.some((issue) => !issue.resolvedAt)) {
+    const blockingIssues = candidate.issues.filter((issue) => isBlockingIssue(issue));
+    if (!product.approvedForImport || blockingIssues.length > 0) {
       throw new BadRequestException("Candidate must be approved and have no unresolved issues before import");
     }
 
@@ -206,6 +222,64 @@ export class AdminCatalogService {
     return {
       candidate: updated,
       productMarketId: imported?.id ?? null
+    };
+  }
+
+  async importApprovedCandidates() {
+    const candidates = await this.prisma.catalogCandidate.findMany({
+      where: {
+        approvedForImport: true,
+        status: CatalogCandidateStatus.approved
+      },
+      include: { issues: true },
+      orderBy: [{ updatedAt: "asc" }]
+    });
+    const results: Array<{
+      candidateId: string;
+      status: "imported" | "skipped" | "failed";
+      productMarketId?: string | null;
+      reason?: string;
+    }> = [];
+    let imported = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const candidate of candidates) {
+      const blockingIssues = candidate.issues.filter((issue) => isBlockingIssue(issue));
+      if (blockingIssues.length > 0) {
+        skipped += 1;
+        results.push({
+          candidateId: candidate.id,
+          status: "skipped",
+          reason: blockingIssues.map((issue) => issue.issueKey).join(", ")
+        });
+        continue;
+      }
+
+      try {
+        const result = await this.importCandidate(candidate.id);
+        imported += 1;
+        results.push({
+          candidateId: candidate.id,
+          status: "imported",
+          productMarketId: result.productMarketId
+        });
+      } catch (error) {
+        failed += 1;
+        results.push({
+          candidateId: candidate.id,
+          status: "failed",
+          reason: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+
+    return {
+      scanned: candidates.length,
+      imported,
+      skipped,
+      failed,
+      results
     };
   }
 
@@ -446,28 +520,77 @@ export class AdminCatalogService {
     return adminPanelHtml;
   }
 
-  private async upsertCandidate(product: CandidateProductDto) {
+  private async upsertCandidate(product: CandidateProductDto): Promise<{
+    candidate: Awaited<ReturnType<AdminCatalogService["getCandidate"]>>;
+    disposition: CandidateDisposition;
+  }> {
     const reviewedProduct = product as ReviewedCatalogProduct;
     const issueDrafts = await this.detectIssues(reviewedProduct);
     const status =
       reviewedProduct.approvedForImport && issueDrafts.length === 0
         ? CatalogCandidateStatus.approved
         : CatalogCandidateStatus.needs_review;
+    const existing = await this.findExistingCandidate(reviewedProduct);
+    const disposition: CandidateDisposition = existing ? "updated" : "created";
+    if (existing?.status === CatalogCandidateStatus.imported) {
+      await this.audit(
+        "catalog_candidate.ingest.skipped_already_imported",
+        "CatalogCandidate",
+        existing.id,
+        existing,
+        reviewedProduct
+      );
+      return {
+        candidate: await this.getCandidate(existing.id),
+        disposition: "skipped"
+      };
+    }
 
-    const saved = await this.prisma.catalogCandidate.upsert({
+    const saved = existing
+      ? await this.prisma.catalogCandidate.update({
+          where: { id: existing.id },
+          data: this.candidateWrite(reviewedProduct, status),
+          include: { issues: true }
+        })
+      : await this.prisma.catalogCandidate.create({
+          data: this.candidateWrite(reviewedProduct, status),
+          include: { issues: true }
+        });
+    await this.replaceIssues(saved.id, issueDrafts);
+    await this.audit(
+      "catalog_candidate.ingest",
+      "CatalogCandidate",
+      saved.id,
+      existing,
+      reviewedProduct
+    );
+    return {
+      candidate: await this.getCandidate(saved.id),
+      disposition
+    };
+  }
+
+  private async findExistingCandidate(product: ReviewedCatalogProduct) {
+    const sourceMatch = await this.prisma.catalogCandidate.findUnique({
       where: {
         sourceName_sourceUrl: {
-          sourceName: reviewedProduct.sourceName,
-          sourceUrl: reviewedProduct.sourceUrl
+          sourceName: product.sourceName,
+          sourceUrl: product.sourceUrl
         }
-      },
-      update: this.candidateWrite(reviewedProduct, status),
-      create: this.candidateWrite(reviewedProduct, status),
-      include: { issues: true }
+      }
     });
-    await this.replaceIssues(saved.id, issueDrafts);
-    await this.audit("catalog_candidate.ingest", "CatalogCandidate", saved.id, null, reviewedProduct);
-    return this.getCandidate(saved.id);
+    if (sourceMatch) return sourceMatch;
+
+    const barcodeGtin = normalizeGtin(product.barcodeGtin);
+    if (!barcodeGtin) return null;
+
+    return this.prisma.catalogCandidate.findFirst({
+      where: {
+        marketCode: product.marketCode ?? "TR",
+        barcodeGtin
+      },
+      orderBy: [{ status: "asc" }, { updatedAt: "desc" }]
+    });
   }
 
   private async getCandidate(id: string) {
@@ -570,6 +693,25 @@ export class AdminCatalogService {
         severity: "warning",
         message: "Product does not have a usable image URL."
       });
+    }
+
+    const barcodeGtin = normalizeGtin(product.barcodeGtin);
+    if (barcodeGtin) {
+      const imported = await this.prisma.productMarket.findFirst({
+        where: {
+          barcodeGtin,
+          market: { marketCode: product.marketCode ?? "TR" }
+        },
+        select: { id: true, localProductName: true }
+      });
+      if (imported) {
+        issues.push({
+          issueKey: "already_in_catalog",
+          field: "barcodeGtin",
+          severity: "info",
+          message: `Catalog already has this GTIN: ${imported.localProductName}`
+        });
+      }
     }
 
     return dedupeIssues(issues);
@@ -701,6 +843,7 @@ const adminPanelHtml = `<!doctype html>
   <section>
     <h2>Queue</h2>
     <button onclick="loadCandidates()">Refresh</button>
+    <button class="secondary" onclick="importApproved()">Import approved</button>
     <div id="queue"></div>
   </section>
 </main>
@@ -757,7 +900,15 @@ async function importCandidate(id) {
   await requestJson("/api/v1/admin/catalog/candidates/" + id + "/import", { method: "POST", headers: headers() });
   await loadCandidates();
 }
+async function importApproved() {
+  await requestJson("/api/v1/admin/catalog/candidates/import-approved", { method: "POST", headers: headers() });
+  await loadCandidates();
+}
 loadCandidates().catch((error) => showResult(error.message || String(error)));
 </script>
 </body>
 </html>`;
+
+function isBlockingIssue(issue: { severity: string; resolvedAt?: Date | string | null }) {
+  return !issue.resolvedAt && issue.severity !== "info";
+}

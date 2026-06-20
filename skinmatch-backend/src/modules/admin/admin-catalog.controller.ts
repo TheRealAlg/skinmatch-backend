@@ -47,6 +47,12 @@ export class AdminCatalogController {
   }
 
   @UseGuards(AdminKeyGuard)
+  @Post("candidates/import-approved")
+  importApprovedCandidates() {
+    return this.adminCatalogService.importApprovedCandidates();
+  }
+
+  @UseGuards(AdminKeyGuard)
   @Post("candidates/:id/import")
   importCandidate(@Param("id") id: string) {
     return this.adminCatalogService.importCandidate(id);

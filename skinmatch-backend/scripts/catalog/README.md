@@ -27,6 +27,7 @@ The backend also exposes a review queue for product operations:
   - `GET /api/v1/admin/catalog/candidates`
   - `PATCH /api/v1/admin/catalog/candidates/:id/review`
   - `POST /api/v1/admin/catalog/candidates/:id/import`
+  - `POST /api/v1/admin/catalog/candidates/import-approved`
 - Manage Turkish taxonomy and ingredients:
   - `GET /api/v1/admin/catalog/categories`
   - `POST /api/v1/admin/catalog/categories`
@@ -40,9 +41,12 @@ key header. Set `ADMIN_API_KEY` in `.env`; local development falls back to
 `skinmatch-local-admin` when `NODE_ENV` is not `production`.
 
 The queue marks missing approvals, unknown categories, unknown ingredients,
-missing Turkish localizations, and missing product images before import. Admins
-can add category aliases and ingredient Turkish names/descriptions, then approve
-and import the candidate once unresolved issues are cleared.
+missing Turkish localizations, missing product images, and already-imported
+GTINs before import. Same-market GTINs update a single queue candidate instead
+of creating repeated rows; already-imported GTINs are informational because the
+reviewed importer updates products idempotently by market and GTIN. Admins can
+add category aliases and ingredient Turkish names/descriptions, then approve and
+import the candidate once unresolved blocking issues are cleared.
 
 ## Trust Rules
 
