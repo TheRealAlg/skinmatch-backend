@@ -8,6 +8,7 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { ConsentsModule } from "./modules/consents/consents.module";
 import { SkinProfileModule } from "./modules/skin-profile/skin-profile.module";
 import { ProductsModule } from "./modules/products/products.module";
+import { AdminModule } from "./modules/admin/admin.module";
 import { envValidationSchema } from "./common/config/env.validation";
 
 @Module({
@@ -22,7 +23,8 @@ import { envValidationSchema } from "./common/config/env.validation";
     AuthModule,
     ConsentsModule,
     SkinProfileModule,
-    ProductsModule
+    ProductsModule,
+    AdminModule
   ]
 })
 export class AppModule implements NestModule {

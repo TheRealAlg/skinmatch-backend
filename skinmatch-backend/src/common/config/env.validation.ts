@@ -10,6 +10,7 @@ export const envValidationSchema = Joi.object({
   ALLOW_MOCK_AUTH: Joi.boolean().default(false),
   DEFAULT_MARKET_CODE: Joi.string().default("TR"),
   DEFAULT_LOCALE: Joi.string().default("tr-TR"),
+  ADMIN_API_KEY: Joi.string().optional(),
   REDIS_URL: Joi.string().optional(),
   MEILISEARCH_HOST: Joi.string().optional(),
   MEILISEARCH_API_KEY: Joi.string().optional()

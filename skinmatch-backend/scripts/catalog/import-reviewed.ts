@@ -18,8 +18,6 @@ import {
   validateReviewedProducts
 } from "./catalog-shared";
 
-const prisma = new PrismaClient();
-
 export class CatalogImportValidationError extends Error {
   constructor(readonly issues: ReturnType<typeof validateReviewedProducts>) {
     super(`Reviewed catalog import failed validation with ${issues.length} issue(s).`);
@@ -286,9 +284,11 @@ async function upsertIngredient(
 }
 
 async function main() {
+  const prisma = new PrismaClient();
   const args = parseArgs(process.argv.slice(2));
   if (!args.file) {
     console.error("Usage: npm run catalog:import:reviewed -- --file path/to/reviewed-products.json");
+    await prisma.$disconnect();
     process.exitCode = 1;
     return;
   }

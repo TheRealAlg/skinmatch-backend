@@ -34,6 +34,11 @@ npm run prisma:seed
 npm run start:dev
 ```
 
+Catalog ops admin routes require `ADMIN_API_KEY`; local development defaults to
+`skinmatch-local-admin` outside production. The lightweight panel is available
+at `http://localhost:3000/api/v1/admin/catalog/panel` when the backend is
+running.
+
 Healthcheck:
 
 ```bash

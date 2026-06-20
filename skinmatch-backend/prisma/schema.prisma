@@ -94,6 +94,14 @@ enum DataConfidence {
   high
 }
 
+enum CatalogCandidateStatus {
+  new
+  needs_review
+  approved
+  rejected
+  imported
+}
+
 model Market {
   id                String   @id @default(uuid()) @db.Uuid
   marketCode        String   @unique @map("market_code")
@@ -271,6 +279,106 @@ model ProductMarket {
   @@index([dataConfidence])
   @@index([normalizedLocalProductName])
   @@map("product_market")
+}
+
+model CatalogCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  localizations CatalogCategoryLocalization[]
+  aliases       CatalogCategoryAlias[]
+
+  @@index([isActive, sortOrder])
+  @@map("catalog_categories")
+}
+
+model CatalogCategoryLocalization {
+  id          String   @id @default(uuid()) @db.Uuid
+  categoryId  String   @map("category_id") @db.Uuid
+  locale      String
+  displayName String   @map("display_name")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  category CatalogCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+  @@index([locale, displayName])
+  @@map("catalog_category_localizations")
+}
+
+model CatalogCategoryAlias {
+  id              String   @id @default(uuid()) @db.Uuid
+  categoryId      String   @map("category_id") @db.Uuid
+  locale          String   @default("und")
+  alias           String
+  normalizedAlias String   @map("normalized_alias")
+  source          String?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  category CatalogCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale, normalizedAlias])
+  @@index([normalizedAlias])
+  @@map("catalog_category_aliases")
+}
+
+model CatalogCandidate {
+  id                      String                 @id @default(uuid()) @db.Uuid
+  sourceName              String                 @map("source_name")
+  sourceUrl               String                 @map("source_url")
+  marketCode              String                 @default("TR") @map("market_code")
+  locale                  String                 @default("tr-TR")
+  brandName               String?                @map("brand_name")
+  localProductName        String?                @map("local_product_name")
+  category                String?
+  barcodeGtin             String?                @map("barcode_gtin")
+  rawIngredientText       String?                @map("raw_ingredient_text")
+  imageUrl                String?                @map("image_url")
+  imageSourceUrl          String?                @map("image_source_url")
+  imageUsageRightsNote    String?                @map("image_usage_rights_note")
+  payload                 Json
+  status                  CatalogCandidateStatus @default(new)
+  approvedForImport       Boolean                @default(false) @map("approved_for_import")
+  verificationStatus      VerificationStatus     @default(user_submitted) @map("verification_status")
+  dataConfidence          DataConfidence         @default(low) @map("data_confidence")
+  reviewer                String?
+  reviewNotes             String?                @map("review_notes")
+  importedProductMarketId String?                @map("imported_product_market_id") @db.Uuid
+  importedAt              DateTime?              @map("imported_at")
+  createdAt               DateTime               @default(now()) @map("created_at")
+  updatedAt               DateTime               @updatedAt @map("updated_at")
+
+  issues CatalogCandidateIssue[]
+
+  @@unique([sourceName, sourceUrl])
+  @@index([status, updatedAt])
+  @@index([marketCode, barcodeGtin])
+  @@index([category])
+  @@map("catalog_candidates")
+}
+
+model CatalogCandidateIssue {
+  id             String    @id @default(uuid()) @db.Uuid
+  candidateId    String    @map("candidate_id") @db.Uuid
+  issueKey       String    @map("issue_key")
+  field          String?
+  severity       String    @default("warning")
+  message        String
+  resolvedAt     DateTime? @map("resolved_at")
+  resolutionNote String?   @map("resolution_note")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  candidate CatalogCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, issueKey, field, message])
+  @@index([issueKey, resolvedAt])
+  @@map("catalog_candidate_issues")
 }
 
 model ProductMarketImage {

@@ -194,6 +194,7 @@ export class ProductsService {
           inciName: mapping.ingredient.inciName,
           normalizedName: mapping.ingredient.normalizedName,
           displayName: localization?.displayName ?? mapping.ingredient.inciName,
+          description: localization?.description ?? null,
           displayLocale: localization?.locale ?? null,
           position: mapping.position,
           rawText: mapping.rawText,

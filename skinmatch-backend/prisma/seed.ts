@@ -12,6 +12,7 @@ type IngredientSeed = {
   inciName: string;
   normalizedName: string;
   displayNameTr: string;
+  descriptionTr?: string;
   functions: Array<{
     functionKey: string;
     labelTr: string;
@@ -28,6 +29,14 @@ type IngredientSeed = {
     normalizedSynonym: string;
     locale?: string;
   }>;
+};
+
+type CatalogCategorySeed = {
+  key: string;
+  sortOrder: number;
+  displayNameTr: string;
+  descriptionTr: string;
+  aliases: string[];
 };
 
 type ProductSeed = {
@@ -57,11 +66,64 @@ const brands = [
   { name: "The Purest Solutions", normalizedName: "the-purest-solutions" }
 ];
 
+const catalogCategories: CatalogCategorySeed[] = [
+  {
+    key: "serum",
+    sortOrder: 10,
+    displayNameTr: "Serum",
+    descriptionTr: "Hedefli içerik veya bakım odağı bulunan hafif ürün kategorisi.",
+    aliases: ["serum", "ampul", "essence"]
+  },
+  {
+    key: "cleanser",
+    sortOrder: 20,
+    displayNameTr: "Temizleyici",
+    descriptionTr: "Cildi ve ürün kalıntılarını temizlemeye yönelik ürün kategorisi.",
+    aliases: ["temizleyici", "yüz yıkama", "cleanser", "wash", "gel"]
+  },
+  {
+    key: "moisturizer",
+    sortOrder: 30,
+    displayNameTr: "Nemlendirici",
+    descriptionTr: "Nem desteği ve bariyer hissi için kullanılan krem, losyon veya jel ürünleri.",
+    aliases: ["nemlendirici", "krem", "moisturizer", "cream", "lotion"]
+  },
+  {
+    key: "sunscreen",
+    sortOrder: 40,
+    displayNameTr: "Güneş koruyucu",
+    descriptionTr: "Güneşten korunma amacıyla kullanılan SPF ürünleri.",
+    aliases: ["güneş koruyucu", "gunes koruyucu", "spf", "sunscreen"]
+  },
+  {
+    key: "toner",
+    sortOrder: 50,
+    displayNameTr: "Tonik",
+    descriptionTr: "Temizlik sonrası kullanılan sıvı bakım adımı.",
+    aliases: ["tonik", "toner"]
+  },
+  {
+    key: "mask",
+    sortOrder: 60,
+    displayNameTr: "Maske",
+    descriptionTr: "Belirli süre ciltte bekletilen bakım ürünü kategorisi.",
+    aliases: ["maske", "mask"]
+  },
+  {
+    key: "unknown",
+    sortOrder: 999,
+    displayNameTr: "Belirsiz",
+    descriptionTr: "Kategori otomatik olarak güvenle eşleşmedi; manuel inceleme gerekir.",
+    aliases: ["unknown", "belirsiz"]
+  }
+];
+
 const ingredients: IngredientSeed[] = [
   {
     inciName: "Aqua",
     normalizedName: "aqua",
     displayNameTr: "Su",
+    descriptionTr: "Formülde çözücü veya taşıyıcı olarak bulunabilir.",
     functions: [{ functionKey: "solvent", labelTr: "Cozucu" }],
     synonyms: [{ synonym: "Water", normalizedSynonym: "water" }]
   },
@@ -69,12 +131,14 @@ const ingredients: IngredientSeed[] = [
     inciName: "Glycerin",
     normalizedName: "glycerin",
     displayNameTr: "Gliserin",
+    descriptionTr: "Nem tutucu olarak kullanılan yaygın bir içeriktir.",
     functions: [{ functionKey: "humectant", labelTr: "Nem tutucu" }]
   },
   {
     inciName: "Niacinamide",
     normalizedName: "niacinamide",
     displayNameTr: "Niasinamid",
+    descriptionTr: "Cilt bakım ürünlerinde bariyer, görünüm ve sebum dengesine yönelik formüllerde sık görülür.",
     functions: [
       {
         functionKey: "skin_conditioning",
@@ -95,18 +159,21 @@ const ingredients: IngredientSeed[] = [
     inciName: "Zinc PCA",
     normalizedName: "zinc-pca",
     displayNameTr: "Cinko PCA",
+    descriptionTr: "Sebum dengesi ve cilt bakım desteği odağıyla kullanılan bir içeriktir.",
     functions: [{ functionKey: "skin_conditioning", labelTr: "Cilt bakim destekleyici" }]
   },
   {
     inciName: "Panthenol",
     normalizedName: "panthenol",
     displayNameTr: "Pantenol",
+    descriptionTr: "Nem ve yatıştırıcı bakım hissi için formüllerde yer alabilir.",
     functions: [{ functionKey: "humectant", labelTr: "Nem tutucu" }]
   },
   {
     inciName: "Sodium Hyaluronate",
     normalizedName: "sodium-hyaluronate",
     displayNameTr: "Sodyum Hiyaluronat",
+    descriptionTr: "Nem tutucu olarak kullanılan hyaluronik asit tuzudur.",
     functions: [{ functionKey: "humectant", labelTr: "Nem tutucu" }],
     synonyms: [{ synonym: "Hyaluronic Acid", normalizedSynonym: "hyaluronic-acid" }]
   },
@@ -114,30 +181,35 @@ const ingredients: IngredientSeed[] = [
     inciName: "Ceramide NP",
     normalizedName: "ceramide-np",
     displayNameTr: "Seramid NP",
+    descriptionTr: "Cilt bariyeri odağı olan formüllerde görülebilen lipid içeriktir.",
     functions: [{ functionKey: "barrier_lipid", labelTr: "Bariyer lipid bilgisi" }]
   },
   {
     inciName: "Ceramide AP",
     normalizedName: "ceramide-ap",
     displayNameTr: "Seramid AP",
+    descriptionTr: "Cilt bariyeri odağı olan formüllerde görülebilen lipid içeriktir.",
     functions: [{ functionKey: "barrier_lipid", labelTr: "Bariyer lipid bilgisi" }]
   },
   {
     inciName: "Ceramide EOP",
     normalizedName: "ceramide-eop",
     displayNameTr: "Seramid EOP",
+    descriptionTr: "Cilt bariyeri odağı olan formüllerde görülebilen lipid içeriktir.",
     functions: [{ functionKey: "barrier_lipid", labelTr: "Bariyer lipid bilgisi" }]
   },
   {
     inciName: "Cholesterol",
     normalizedName: "cholesterol",
     displayNameTr: "Kolesterol",
+    descriptionTr: "Bariyer lipidleriyle birlikte kullanılan yumuşatıcı bir içerik olabilir.",
     functions: [{ functionKey: "emollient", labelTr: "Yumusatici" }]
   },
   {
     inciName: "Cetearyl Alcohol",
     normalizedName: "cetearyl-alcohol",
     displayNameTr: "Setearil Alkol",
+    descriptionTr: "Yağlı alkol grubunda, kıvam ve yumuşaklık sağlayabilen bir içeriktir.",
     functions: [{ functionKey: "emollient", labelTr: "Yumusatici" }]
   },
   {
@@ -226,6 +298,7 @@ const ingredients: IngredientSeed[] = [
     inciName: "Sodium Chloride",
     normalizedName: "sodium-chloride",
     displayNameTr: "Sodyum Klorur",
+    descriptionTr: "Kıvam düzenlemeye yardımcı olabilen tuz içeriktir.",
     functions: [{ functionKey: "viscosity_control", labelTr: "Kivam duzenleyici" }]
   }
 ];
@@ -363,6 +436,17 @@ function ingredientRawText(normalizedName: string) {
   return ingredients.find((ingredient) => ingredient.normalizedName === normalizedName)?.inciName ?? normalizedName;
 }
 
+function normalizeKey(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+}
+
 export async function seedDatabase(client: PrismaClient = prisma) {
   await client.$transaction(async (tx) => {
     const market = await tx.market.upsert({
@@ -390,6 +474,63 @@ export async function seedDatabase(client: PrismaClient = prisma) {
       brandByNormalizedName.set(brand.normalizedName, savedBrand);
     }
 
+    for (const category of catalogCategories) {
+      const savedCategory = await tx.catalogCategory.upsert({
+        where: { key: category.key },
+        update: {
+          sortOrder: category.sortOrder,
+          isActive: true
+        },
+        create: {
+          key: category.key,
+          sortOrder: category.sortOrder,
+          isActive: true
+        }
+      });
+
+      await tx.catalogCategoryLocalization.upsert({
+        where: {
+          categoryId_locale: {
+            categoryId: savedCategory.id,
+            locale: "tr-TR"
+          }
+        },
+        update: {
+          displayName: category.displayNameTr,
+          description: category.descriptionTr
+        },
+        create: {
+          categoryId: savedCategory.id,
+          locale: "tr-TR",
+          displayName: category.displayNameTr,
+          description: category.descriptionTr
+        }
+      });
+
+      for (const alias of category.aliases) {
+        await tx.catalogCategoryAlias.upsert({
+          where: {
+            categoryId_locale_normalizedAlias: {
+              categoryId: savedCategory.id,
+              locale: "tr-TR",
+              normalizedAlias: normalizeKey(alias)
+            }
+          },
+          update: {
+            alias,
+            source: "mvp_seed"
+          },
+          create: {
+            categoryId: savedCategory.id,
+            locale: "tr-TR",
+            alias,
+            normalizedAlias: normalizeKey(alias),
+            source: "mvp_seed"
+          }
+        });
+      }
+    }
+
     const ingredientByNormalizedName = new Map<string, { id: string; inciName: string }>();
     for (const ingredient of ingredients) {
       const savedIngredient = await tx.ingredient.upsert({
@@ -409,12 +550,14 @@ export async function seedDatabase(client: PrismaClient = prisma) {
           }
         },
         update: {
-          displayName: ingredient.displayNameTr
+          displayName: ingredient.displayNameTr,
+          description: ingredient.descriptionTr
         },
         create: {
           ingredientId: savedIngredient.id,
           locale: "tr-TR",
-          displayName: ingredient.displayNameTr
+          displayName: ingredient.displayNameTr,
+          description: ingredient.descriptionTr
         }
       });
 
