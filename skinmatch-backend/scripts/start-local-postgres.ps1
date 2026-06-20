@@ -27,7 +27,8 @@ $initdb = Resolve-Tool "initdb"
 $pgCtl = Resolve-Tool "pg_ctl"
 $createdb = Resolve-Tool "createdb"
 $psql = Resolve-Tool "psql"
-$logFile = Join-Path $DataDir "postgres.log"
+$pgIsReady = Get-Command "pg_isready.exe" -ErrorAction SilentlyContinue
+$logFile = Join-Path $DataDir ("postgres-{0}.log" -f (Get-Date -Format "yyyyMMddHHmmss"))
 
 New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 
@@ -36,13 +37,27 @@ if (!(Test-Path (Join-Path $DataDir "PG_VERSION"))) {
     & $initdb -D $DataDir -U $User -A trust -E UTF8 --locale=C
 }
 
-$listener = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue |
-    Where-Object { $_.State -eq "Listen" } |
-    Select-Object -First 1
+$isReady = $false
+if ($pgIsReady) {
+    & $pgIsReady.Source -h 127.0.0.1 -p $Port -U $User -d postgres | Out-Null
+    $isReady = ($LASTEXITCODE -eq 0)
+}
 
-if (!$listener) {
+$listener = $null
+if (!$isReady) {
+    $listener = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue |
+        Where-Object { $_.State -eq "Listen" } |
+        Select-Object -First 1
+}
+
+if ($isReady) {
+    Write-Step "PostgreSQL is already accepting connections on 127.0.0.1:$Port"
+} elseif (!$listener) {
     Write-Step "Starting PostgreSQL on 127.0.0.1:$Port"
     & $pgCtl -D $DataDir -l $logFile -o "-p $Port" start
+    if ($LASTEXITCODE -ne 0) {
+        throw "pg_ctl failed to start PostgreSQL. See $logFile for details."
+    }
 } else {
     Write-Step "PostgreSQL listener already exists on port $Port"
 }

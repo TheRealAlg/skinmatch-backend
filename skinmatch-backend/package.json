@@ -7,6 +7,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
+    "db:start:local": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-postgres.ps1",
+    "prestart:dev": "npm run db:start:local",
     "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
     "test": "jest",
     "test:unit": "jest test/unit",

@@ -26,13 +26,16 @@ skinmatch-backend/
 cd skinmatch-backend
 npm install
 cp .env.example .env
-docker compose up -d
 npm run prisma:generate
 npm run prisma:validate
 npm run prisma:migrate -- --name init
 npm run prisma:seed
 npm run start:dev
 ```
+
+`npm run start:dev` starts the local PostgreSQL helper first, then launches the
+NestJS dev server. If you prefer Docker/Postgres elsewhere, keep `DATABASE_URL`
+pointed at that database and run it before starting the backend.
 
 Catalog ops admin routes require `ADMIN_API_KEY`; local development defaults to
 `skinmatch-local-admin` outside production. The lightweight panel is available
@@ -84,7 +87,8 @@ Then set this in `.env`:
 DATABASE_URL=postgresql://skincare:skincare@localhost:5432/skincare_dev?schema=public
 ```
 
-Run the app setup against that database:
+Run the app setup against that database. `npm run start:dev` will start this
+helper automatically on later runs:
 
 ```bash
 cd skinmatch-backend
